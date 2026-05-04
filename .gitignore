@@ -1,0 +1,39 @@
+# Local Claude Code state (user-specific permissions, conversation transcripts, etc.)
+.claude/settings.local.json
+.claude/local/
+.claude/transcripts/
+
+# Node
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.npm
+.eslintcache
+.oxlintcache
+coverage/
+*.lcov
+
+# Env files (per-app .env stays gitignored; .env.example is committed)
+.env
+.env.local
+.env.*.local
+
+# Prisma generated clients (regenerated on prisma generate)
+**/prisma/**/generated/
+**/prisma/generated/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+
+# Docker volumes (if ever bind-mounted locally)
+.volumes/
