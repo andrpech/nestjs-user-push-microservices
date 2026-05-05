@@ -12,13 +12,22 @@ const QUEUE = 'notifier.user-created'
 @Consumer({
 	queue: QUEUE,
 	prefetch: 10,
+	queueArgs: {
+		'x-dead-letter-exchange': 'notifications.retry.events',
+		'x-dead-letter-routing-key': 'user.created'
+	},
 	bindings: [
 		{
 			exchange: 'users.events',
 			routingKey: 'user.created',
 			exchangeType: 'topic'
 		}
-	]
+	],
+	dlq: {
+		exchange: 'notifications.dlx',
+		routingKey: 'user.created',
+		maxAttempts: 5
+	}
 })
 export class UserCreatedConsumer extends RmqConsumer<UserCreatedEvent> {
 	protected readonly schema: ZodType<UserCreatedEvent> = UserCreatedEventSchema
@@ -44,7 +53,8 @@ export class UserCreatedConsumer extends RmqConsumer<UserCreatedEvent> {
 				queue: QUEUE,
 				userId: event.userId,
 				notificationId: result.notificationId,
-				deduped: result.deduped
+				deduped: result.deduped,
+				deathCount: ctx.deathCount
 			},
 			'notification ingested'
 		)

@@ -5,8 +5,13 @@ import { ConfigurationInjectKey, ConfigurationType } from '../../../config'
 import { NotificationsWritePrismaClient } from '../../../database/notifications.clients'
 import { historyEntry, historyJson } from '../history'
 
+export type RecoverStuckOutput = {
+	recovered: number
+	failed: number
+}
+
 @Injectable()
-export class RecoverStuckNotificationsCommand implements Command<void, number> {
+export class RecoverStuckNotificationsCommand implements Command<void, RecoverStuckOutput> {
 	constructor(
 		@Inject(NotificationsWritePrismaClient)
 		private readonly write: NotificationsWritePrismaClient,
@@ -14,13 +19,31 @@ export class RecoverStuckNotificationsCommand implements Command<void, number> {
 		private readonly config: ConfigurationType
 	) {}
 
-	// Phase 5: reset stuck PROCESSING rows back to PENDING and bump redrive_count.
-	// Phase 6 will add the MAX_REDRIVES cap that transitions to FAILED instead.
-	async execute(): Promise<number> {
+	async execute(): Promise<RecoverStuckOutput> {
 		const { recoveryThresholdMs } = this.config.notifier
-		const segment = historyJson(historyEntry('REDRIVEN_FROM_STUCK'))
+		const { maxRedrives } = this.config.retry
 
-		const result = await this.write.$executeRawUnsafe<number>(
+		// First: rows past the redrive cap → terminal FAILED.
+		const failedSegment = historyJson(
+			historyEntry('REDRIVEN_FROM_STUCK', { error: 'exceeded redrive limit' })
+		)
+		const failedResult = await this.write.$executeRawUnsafe<number>(
+			`UPDATE notifications
+			 SET status = 'FAILED',
+			     last_error = 'exceeded redrive limit',
+			     processing_started_at = NULL,
+			     history = history || $1::jsonb
+			 WHERE status = 'PROCESSING'
+			   AND processing_started_at < NOW() - ($2::int * INTERVAL '1 millisecond')
+			   AND redrive_count >= $3`,
+			failedSegment,
+			recoveryThresholdMs,
+			maxRedrives
+		)
+
+		// Then: eligible rows → reset to PENDING + bump redrive count.
+		const recoverSegment = historyJson(historyEntry('REDRIVEN_FROM_STUCK'))
+		const recoveredResult = await this.write.$executeRawUnsafe<number>(
 			`UPDATE notifications
 			 SET status = 'PENDING',
 			     processing_started_at = NULL,
@@ -28,10 +51,13 @@ export class RecoverStuckNotificationsCommand implements Command<void, number> {
 			     last_redriven_at = NOW(),
 			     history = history || $1::jsonb
 			 WHERE status = 'PROCESSING'
-			   AND processing_started_at < NOW() - ($2::int * INTERVAL '1 millisecond')`,
-			segment,
-			recoveryThresholdMs
+			   AND processing_started_at < NOW() - ($2::int * INTERVAL '1 millisecond')
+			   AND redrive_count < $3`,
+			recoverSegment,
+			recoveryThresholdMs,
+			maxRedrives
 		)
-		return Number(result)
+
+		return { recovered: Number(recoveredResult), failed: Number(failedResult) }
 	}
 }

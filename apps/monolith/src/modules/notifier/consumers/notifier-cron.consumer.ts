@@ -35,7 +35,7 @@ export class NotifierCronConsumer extends RmqConsumer<CronTick> {
 	}
 
 	async handle(): Promise<void> {
-		const recovered = await this.recover.execute()
+		const { recovered, failed: recoveryFailed } = await this.recover.execute()
 		const claimed = await this.claim.execute()
 
 		const dispatched = await Promise.all(
@@ -48,9 +48,14 @@ export class NotifierCronConsumer extends RmqConsumer<CronTick> {
 			})
 		)
 
-		if (recovered > 0 || claimed.length > 0) {
+		if (recovered > 0 || recoveryFailed > 0 || claimed.length > 0) {
 			this.pinoLogger.info(
-				{ recovered, claimed: claimed.length, dispatched: dispatched.length },
+				{
+					recovered,
+					recoveryFailed,
+					claimed: claimed.length,
+					dispatched: dispatched.length
+				},
 				'notifier tick'
 			)
 		}

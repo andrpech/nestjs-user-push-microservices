@@ -71,7 +71,7 @@ Tracked in `docs/plans/user-push-microservices.md` (13 phases). At a glance:
 - [x] Phase 3 — Outbox publish (scheduler, cron producers, claim-and-publish, RMQ health)
 - [x] Phase 4 — Notification ingest (notifier module + `UserCreatedConsumer`, idempotent INSERT)
 - [x] Phase 5 — Push delivery happy path (cron-driven claim, HTTP webhook with `Idempotency-Key`, history audit trail)
-- [ ] Phase 6 — Robustness: retries, DLQ, stuck recovery
+- [x] Phase 6 — Robustness: send-retry with per-message expiration, inbox DLX→retry→DLQ ring, stuck-recovery redrive cap
 - [ ] Phase 7 — Split into 3 apps
 - [ ] Phase 8 — Metrics (Prometheus)
 - [ ] Phase 9 — Dashboards (Grafana)

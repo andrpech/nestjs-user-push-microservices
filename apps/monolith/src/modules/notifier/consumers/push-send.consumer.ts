@@ -3,10 +3,14 @@ import { PinoLogger } from 'nestjs-pino'
 import { ZodType } from 'zod'
 
 import { Consumer, ConsumerCtx, RmqConnection, RmqConsumer } from '@app/rmq'
+import { ConfigurationInjectKey, ConfigurationType } from '../../../config'
 import { NotificationsReadPrismaClient } from '../../../database/notifications.clients'
+import { MarkAttemptFailedCommand } from '../commands/mark-attempt-failed.command'
 import { MarkSentCommand } from '../commands/mark-sent.command'
+import { MarkTerminalFailedCommand } from '../commands/mark-terminal-failed.command'
 import { SendPushCommand } from '../commands/send-push.command'
 import { PushSendEvent, PushSendEventSchema } from '../dto/push-send.event'
+import { PushSendRetryProducer } from '../producers/push-send-retry.producer'
 
 const QUEUE = 'notifier.push-send'
 
@@ -29,8 +33,13 @@ export class PushSendConsumer extends RmqConsumer<PushSendEvent> {
 		conn: RmqConnection,
 		@Inject(NotificationsReadPrismaClient)
 		private readonly read: NotificationsReadPrismaClient,
+		@Inject(ConfigurationInjectKey)
+		private readonly config: ConfigurationType,
 		private readonly sendPush: SendPushCommand,
 		private readonly markSent: MarkSentCommand,
+		private readonly markAttemptFailed: MarkAttemptFailedCommand,
+		private readonly markTerminalFailed: MarkTerminalFailedCommand,
+		private readonly retryProducer: PushSendRetryProducer,
 		private readonly pinoLogger: PinoLogger
 	) {
 		super(conn)
@@ -76,10 +85,33 @@ export class PushSendConsumer extends RmqConsumer<PushSendEvent> {
 			return
 		}
 
-		// Phase 5 — log only on failure. Phase 6 will republish to retry queue.
-		this.pinoLogger.warn(
-			{ ...baseLog, status: result.status, error: result.error },
-			'push attempt failed — leaving row PROCESSING for stuck recovery'
+		const errorDetail = result.error
+		const { attempts } = await this.markAttemptFailed.execute({
+			notificationId: event.notificationId,
+			error: errorDetail
+		})
+
+		const { maxAttempts } = this.config.push
+		if (attempts >= maxAttempts) {
+			await this.markTerminalFailed.execute({
+				notificationId: event.notificationId,
+				error: errorDetail
+			})
+			this.pinoLogger.warn(
+				{ ...baseLog, attempts, error: errorDetail },
+				'push exhausted retries — terminal FAILED'
+			)
+			return
+		}
+
+		const expirationMs = 1000 * 2 ** (attempts - 1)
+		await this.retryProducer.publish(event, {
+			expiration: expirationMs,
+			messageId: event.notificationId
+		})
+		this.pinoLogger.info(
+			{ ...baseLog, attempts, expirationMs, error: errorDetail },
+			'push attempt failed — scheduled retry'
 		)
 	}
 }

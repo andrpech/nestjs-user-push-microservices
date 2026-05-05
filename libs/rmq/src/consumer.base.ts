@@ -3,7 +3,7 @@ import type { ChannelWrapper } from 'amqp-connection-manager'
 import type { Channel, ConsumeMessage, Message } from 'amqplib'
 import { ZodType } from 'zod'
 
-import { getConsumerMetadata } from './decorators/consumer.decorator'
+import { ConsumerDlq, getConsumerMetadata } from './decorators/consumer.decorator'
 import { RmqConnection } from './rmq-connection'
 import type { ConsumerCtx } from './types'
 
@@ -46,6 +46,9 @@ export abstract class RmqConsumer<T> implements OnModuleInit {
 	}
 
 	private async dispatch(ch: Channel, msg: ConsumeMessage, queue: string): Promise<void> {
+		const meta = getConsumerMetadata(this)
+		const dlq = meta?.dlq
+
 		try {
 			const raw = JSON.parse(msg.content.toString())
 			const payload = this.schema.parse(raw)
@@ -59,12 +62,44 @@ export abstract class RmqConsumer<T> implements OnModuleInit {
 			await this.handle(payload, ctx)
 			ch.ack(msg)
 		} catch (error) {
-			this.logger.error(
-				{ error, queue, messageId: msg.properties.messageId },
-				'consumer handler failed'
-			)
-			ch.nack(msg, false, false)
+			await this.handleError(ch, msg, queue, error, dlq)
 		}
+	}
+
+	private async handleError(
+		ch: Channel,
+		msg: ConsumeMessage,
+		queue: string,
+		error: unknown,
+		dlq: ConsumerDlq | undefined
+	): Promise<void> {
+		const deathCount = this.deathCount(msg, queue)
+		const baseLog = {
+			error,
+			queue,
+			messageId: msg.properties.messageId,
+			deathCount
+		}
+
+		if (dlq && deathCount + 1 >= dlq.maxAttempts) {
+			try {
+				ch.publish(dlq.exchange, dlq.routingKey, msg.content, {
+					...msg.properties,
+					headers: { ...msg.properties.headers }
+				})
+				ch.ack(msg)
+				this.logger.error(baseLog, 'consumer exhausted retries — routed to DLQ')
+				return
+			} catch (publishError) {
+				this.logger.error(
+					{ ...baseLog, publishError },
+					'DLQ publish failed — falling back to nack-no-requeue'
+				)
+			}
+		}
+
+		this.logger.error(baseLog, 'consumer handler failed — nack-no-requeue')
+		ch.nack(msg, false, false)
 	}
 
 	protected deathCount(msg: Message, queue: string): number {

@@ -34,7 +34,12 @@ export const configuration = registerAs('app', () => {
 		},
 		push: {
 			webhookUrl: process.env.WEBHOOK_URL ?? '',
-			httpTimeoutMs: Number.parseInt(process.env.PUSH_HTTP_TIMEOUT_MS ?? '5000', 10)
+			httpTimeoutMs: Number.parseInt(process.env.PUSH_HTTP_TIMEOUT_MS ?? '5000', 10),
+			maxAttempts: Number.parseInt(process.env.PUSH_MAX_ATTEMPTS ?? '5', 10)
+		},
+		retry: {
+			inboxMaxAttempts: Number.parseInt(process.env.INBOX_MAX_ATTEMPTS ?? '5', 10),
+			maxRedrives: Number.parseInt(process.env.MAX_REDRIVES ?? '5', 10)
 		}
 	}
 

@@ -31,7 +31,12 @@ export const MonolithConfigSchema = z.strictObject({
 	}),
 	push: z.strictObject({
 		webhookUrl: z.url(),
-		httpTimeoutMs: z.number().int().min(100).max(60_000)
+		httpTimeoutMs: z.number().int().min(100).max(60_000),
+		maxAttempts: z.number().int().min(1).max(20)
+	}),
+	retry: z.strictObject({
+		inboxMaxAttempts: z.number().int().min(1).max(20),
+		maxRedrives: z.number().int().min(1).max(20)
 	})
 })
 
