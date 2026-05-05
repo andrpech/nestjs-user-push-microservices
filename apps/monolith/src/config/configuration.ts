@@ -12,6 +12,10 @@ export const configuration = registerAs('app', () => {
 			readUrl: process.env.USERS_READ_DB_URL ?? '',
 			writeUrl: process.env.USERS_WRITE_DB_URL ?? ''
 		},
+		notificationsDb: {
+			readUrl: process.env.NOTIFICATIONS_READ_DB_URL ?? '',
+			writeUrl: process.env.NOTIFICATIONS_WRITE_DB_URL ?? ''
+		},
 		rabbitmq: {
 			url: process.env.RABBITMQ_URL ?? ''
 		},

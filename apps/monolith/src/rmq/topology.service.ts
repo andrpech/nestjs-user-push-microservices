@@ -19,13 +19,9 @@ const EXCHANGES: ExchangeDecl[] = [
 	{ name: 'users.events', type: 'topic' }
 ]
 
-// Placeholder queues for phases 4/5 — declared now so phase-3 publishes don't
-// trip mandatory return listeners. Consumers attach in their own phases.
+// Placeholder queue(s) for phases not yet wired — declared now so publishes don't
+// trip mandatory return listeners. Phase-5 NotifierCronConsumer will own this binding.
 const QUEUES: QueueDecl[] = [
-	{
-		name: 'notifier.user-created',
-		bindings: [{ exchange: 'users.events', routingKey: 'user.created' }]
-	},
 	{
 		name: 'notifier.cron',
 		bindings: [{ exchange: 'system.cron', routingKey: 'cron.notifier' }]

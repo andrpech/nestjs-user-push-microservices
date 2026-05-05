@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: apps/monolith/Dockerfile
       target: builder
-    command: sh -c "npm run build:libs && cd apps/monolith && npx prisma migrate deploy --schema=./prisma/users/schema.prisma && npx nest start --watch"
+    command: sh -c "npm run build:libs && cd apps/monolith && npx prisma migrate deploy --schema=./prisma/users/schema.prisma && npx prisma migrate deploy --schema=./prisma/notifications/schema.prisma && npx nest start --watch"
     environment:
       NODE_ENV: development
       CHOKIDAR_USEPOLLING: 'true'

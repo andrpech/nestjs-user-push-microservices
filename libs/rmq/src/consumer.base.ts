@@ -1,4 +1,4 @@
-import { Logger, OnModuleInit } from '@nestjs/common'
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import type { ChannelWrapper } from 'amqp-connection-manager'
 import type { Channel, ConsumeMessage, Message } from 'amqplib'
 import { ZodType } from 'zod'
@@ -7,6 +7,7 @@ import { getConsumerMetadata } from './decorators/consumer.decorator'
 import { RmqConnection } from './rmq-connection'
 import type { ConsumerCtx } from './types'
 
+@Injectable()
 export abstract class RmqConsumer<T> implements OnModuleInit {
 	protected readonly logger: Logger = new Logger(this.constructor.name)
 	protected abstract readonly schema: ZodType<T>

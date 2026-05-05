@@ -1,4 +1,4 @@
-import { Logger, OnModuleInit } from '@nestjs/common'
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import type { ChannelWrapper } from 'amqp-connection-manager'
 import type { ConfirmChannel } from 'amqplib'
 
@@ -7,6 +7,11 @@ import { getProducerMetadata } from './decorators/producer.decorator'
 import { RmqConnection } from './rmq-connection'
 import type { PublishOpts } from './types'
 
+// @Injectable() on the abstract base makes TS emit `design:paramtypes`, so
+// stub subclasses that only carry a @Producer({...}) decorator don't need
+// to redeclare a constructor for NestJS DI to find RmqConnection via the
+// prototype chain.
+@Injectable()
 export abstract class RmqProducer<T> implements OnModuleInit {
 	protected readonly logger: Logger = new Logger(this.constructor.name)
 	protected channel: ChannelWrapper | undefined

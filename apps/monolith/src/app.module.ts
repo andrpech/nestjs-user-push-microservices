@@ -6,6 +6,7 @@ import { RmqModule } from '@app/rmq'
 import { BaseZodValidationInterceptor } from '@app/zod-validation'
 import { ConfigurationModule } from './config'
 import { HealthModule } from './health/health.module'
+import { NotifierModule } from './modules/notifier/notifier.module'
 import { SchedulerModule } from './modules/scheduler/scheduler.module'
 import { UsersModule } from './modules/users/users.module'
 import { TopologyModule } from './rmq/topology.module'
@@ -18,6 +19,7 @@ import { TopologyModule } from './rmq/topology.module'
 		TopologyModule,
 		HealthModule,
 		UsersModule,
+		NotifierModule,
 		SchedulerModule
 	],
 	providers: [

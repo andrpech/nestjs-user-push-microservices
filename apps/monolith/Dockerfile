@@ -18,6 +18,7 @@ COPY libs ./libs
 
 RUN npm run build:libs
 RUN cd apps/monolith && npx prisma generate --schema=./prisma/users/schema.prisma
+RUN cd apps/monolith && npx prisma generate --schema=./prisma/notifications/schema.prisma
 RUN cd apps/monolith && npx nest build
 
 # ---------------- Runtime ----------------
@@ -35,4 +36,4 @@ COPY --from=builder /app/node_modules ./node_modules
 
 WORKDIR /app/apps/monolith
 
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=./prisma/users/schema.prisma && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=./prisma/users/schema.prisma && npx prisma migrate deploy --schema=./prisma/notifications/schema.prisma && node dist/main.js"]

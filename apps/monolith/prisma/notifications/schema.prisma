@@ -1,0 +1,36 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("NOTIFICATIONS_WRITE_DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated"
+}
+
+enum NotificationStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+model Notification {
+  id                  String             @id
+  userId              String             @unique @map("user_id")
+  name                String
+  status              NotificationStatus @default(PENDING)
+  attempts            Int                @default(0)
+  processingStartedAt DateTime?          @map("processing_started_at")
+  redriveCount        Int                @default(0) @map("redrive_count")
+  lastRedrivenAt      DateTime?          @map("last_redriven_at")
+  lastError           String?            @map("last_error")
+  sentAt              DateTime?          @map("sent_at")
+  history             Json               @default("[]")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([status, processingStartedAt])
+  @@map("notifications")
+}

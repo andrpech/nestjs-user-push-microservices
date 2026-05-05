@@ -93,7 +93,7 @@ Users module exposes `POST /users`. Strict zod validation (1-64 char `name`, no 
 
 ---
 
-## Phase 3: Outbox publish
+## ✅ Phase 3: Outbox publish
 
 **User stories**: 6, 26, 33
 
@@ -103,19 +103,19 @@ Scheduler module is added. `SchedulerService.onModuleInit()` registers two cron 
 
 ### Acceptance criteria
 
-- [ ] Scheduler emits a `cron.users` message every 5s in dev, visible in RMQ management UI
-- [ ] After `POST /users`, within ~5s a `user.created` message is published to `users.events` exchange (visible in RMQ UI)
-- [ ] After publish, the corresponding `users` row has non-null `publishedAt` and null `publishingStartedAt`
-- [ ] Row is published exactly once (next ticks claim 0 rows because `publishedAt IS NOT NULL`)
-- [ ] Publisher confirm channel is in use (publish promise resolves only after broker ack)
-- [ ] If RMQ container is killed mid-publish, row remains claimed; after RMQ restart and 5-min threshold, sweep resets it and next tick republishes
-- [ ] `GET /rhealth` now includes a passing `rabbitmq` check
-- [ ] Cron expressions can be overridden via env (test by setting `USERS_CRON_EXPR=*/10 * * * * *`, observe slower cadence)
-- [ ] No unrouted-message warnings logged (mandatory + return listener silent on healthy path)
+- [x] Scheduler emits a `cron.users` message every 5s in dev, visible in RMQ management UI
+- [x] After `POST /users`, within ~5s a `user.created` message is published to `users.events` exchange (visible in RMQ UI)
+- [x] After publish, the corresponding `users` row has non-null `publishedAt` and null `publishingStartedAt`
+- [x] Row is published exactly once (next ticks claim 0 rows because `publishedAt IS NOT NULL`)
+- [x] Publisher confirm channel is in use (publish promise resolves only after broker ack)
+- [ ] If RMQ container is killed mid-publish, row remains claimed; after RMQ restart and 5-min threshold, sweep resets it and next tick republishes _(not exercised — long-running failure-mode test)_
+- [x] `GET /rhealth` now includes a passing `rabbitmq` check
+- [ ] Cron expressions can be overridden via env (test by setting `USERS_CRON_EXPR=*/10 * * * * *`, observe slower cadence) _(env wired + zod-validated; cadence change not re-verified live)_
+- [x] No unrouted-message warnings logged (mandatory + return listener silent on healthy path)
 
 ---
 
-## Phase 4: Notification ingest
+## ✅ Phase 4: Notification ingest
 
 **User stories**: 5, 26, 32, 33
 
@@ -125,12 +125,12 @@ Notifier module is added. The `notifications` Prisma schema and first migration 
 
 ### Acceptance criteria
 
-- [ ] After Phase 3 publish, a `Notification` row exists in `notifications` table with `status='PENDING'`, `attempts=0`, `name` matching the original POST payload, `userId` matching the user's ID, `history='[]'`
-- [ ] Replaying the same `user.created` event (e.g., via RMQ shovel or manual republish) does not create a second `Notification` row — the unique constraint silently dedupes and the consumer acks
-- [ ] `GET /rhealth` now reports passing `notifications-read-db` and `notifications-write-db` checks
-- [ ] Notifier is the only module that touches the `notifications` DB (verified by code inspection — no `notificationsClient` references in `users` module)
-- [ ] Pino log line for the consumer includes `messageId`, `queue`, `userId`, `notificationId` bindings
-- [ ] A malformed payload (e.g., missing `name`) is `nack-no-requeue`'d (zod parse fails before `handle()` runs)
+- [x] After Phase 3 publish, a `Notification` row exists in `notifications` table with `status='PENDING'`, `attempts=0`, `name` matching the original POST payload, `userId` matching the user's ID, `history='[]'`
+- [x] Replaying the same `user.created` event (e.g., via RMQ shovel or manual republish) does not create a second `Notification` row — the unique constraint silently dedupes and the consumer acks
+- [x] `GET /rhealth` now reports passing `notifications-read-db` and `notifications-write-db` checks
+- [x] Notifier is the only module that touches the `notifications` DB (verified by code inspection — no `notificationsClient` references in `users` module)
+- [x] Pino log line for the consumer includes `messageId`, `queue`, `userId`, `notificationId` bindings
+- [x] A malformed payload (e.g., missing `name`) is `nack-no-requeue`'d (zod parse fails before `handle()` runs)
 
 ---
 

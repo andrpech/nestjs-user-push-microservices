@@ -9,6 +9,10 @@ export const MonolithConfigSchema = z.strictObject({
 		readUrl: z.string().min(1),
 		writeUrl: z.string().min(1)
 	}),
+	notificationsDb: z.strictObject({
+		readUrl: z.string().min(1),
+		writeUrl: z.string().min(1)
+	}),
 	rabbitmq: z.strictObject({
 		url: z.string().min(1)
 	}),
