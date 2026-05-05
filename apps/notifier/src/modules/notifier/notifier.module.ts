@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 
+import { MetricsService, QueueDepthPoller } from '@app/metrics'
 import { ConfigurationModule } from '../../config'
 import { NotificationsDatabaseModule } from '../../database/notifications.database.module'
 import { ClaimDueNotificationsCommand } from './commands/claim-due-notifications.command'
@@ -15,6 +16,15 @@ import { UserCreatedConsumer } from './consumers/user-created.consumer'
 import { NotifierTopologyService } from './notifier-topology.service'
 import { PushSendRetryProducer } from './producers/push-send-retry.producer'
 import { PushSendProducer } from './producers/push-send.producer'
+
+const NOTIFIER_QUEUES = [
+	'notifier.user-created',
+	'notifier.user-created.retry',
+	'notifier.user-created.dlq',
+	'notifier.push-send',
+	'notifier.push-send.retry',
+	'notifier.cron'
+] as const
 
 @Module({
 	imports: [NotificationsDatabaseModule, ConfigurationModule],
@@ -34,7 +44,18 @@ import { PushSendProducer } from './producers/push-send.producer'
 		NotifierCronConsumer,
 		PushSendConsumer,
 		// topology bootstrap (asserts retry/DLQ queues with no consumers)
-		NotifierTopologyService
+		NotifierTopologyService,
+		// observability
+		{
+			provide: QueueDepthPoller,
+			inject: [MetricsService],
+			useFactory: (metrics: MetricsService): QueueDepthPoller =>
+				new QueueDepthPoller({
+					managementUrl: process.env.RABBITMQ_MGMT_URL ?? '',
+					queues: NOTIFIER_QUEUES,
+					gauge: metrics.rmqQueueDepth
+				})
+		}
 	],
 	exports: [NotificationsDatabaseModule]
 })

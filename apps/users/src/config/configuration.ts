@@ -13,7 +13,8 @@ export const configuration = registerAs('app', () => {
 			writeUrl: process.env.USERS_WRITE_DB_URL ?? ''
 		},
 		rabbitmq: {
-			url: process.env.RABBITMQ_URL ?? ''
+			url: process.env.RABBITMQ_URL ?? '',
+			mgmtUrl: process.env.RABBITMQ_MGMT_URL ?? ''
 		},
 		outbox: {
 			batchSize: Number.parseInt(process.env.OUTBOX_BATCH_SIZE ?? '100', 10),

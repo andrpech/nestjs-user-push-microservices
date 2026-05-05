@@ -78,7 +78,7 @@ Tracked in `docs/plans/user-push-microservices.md` (13 phases). At a glance:
 - [x] Phase 5 — Push delivery happy path (cron-driven claim, HTTP webhook with `Idempotency-Key`, history audit trail)
 - [x] Phase 6 — Robustness: send-retry with per-message expiration, inbox DLX→retry→DLQ ring, stuck-recovery redrive cap
 - [x] Phase 7 — Split into 3 apps (users, notifier, scheduler) + 2 migrators with full `depends_on` boot chain
-- [ ] Phase 8 — Metrics (Prometheus)
+- [x] Phase 8 — Metrics (Prometheus): `/metrics` per app, custom counters/histogram/gauges, RMQ queue-depth poller
 - [ ] Phase 9 — Dashboards (Grafana)
 - [ ] Phase 10 — Distributed tracing (OpenTelemetry)
 - [ ] Phase 11 — Admin: detail + list

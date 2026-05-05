@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 
+import { MetricsService, QueueDepthPoller } from '@app/metrics'
 import { ConfigurationModule } from '../../config'
 import { UsersDatabaseModule } from '../../database/users.database.module'
 import { ClaimAndPublishUsersCommand } from './commands/claim-and-publish-users.command'
@@ -9,6 +10,8 @@ import { UserCreatedProducer } from './producers/user-created.producer'
 import { UsersController } from './users.controller'
 import { UsersService } from './users.service'
 
+const USERS_QUEUES = ['users.outbox-cron'] as const
+
 @Module({
 	imports: [UsersDatabaseModule, ConfigurationModule],
 	controllers: [UsersController],
@@ -17,7 +20,17 @@ import { UsersService } from './users.service'
 		CreateUserCommand,
 		ClaimAndPublishUsersCommand,
 		UserCreatedProducer,
-		UsersOutboxCronConsumer
+		UsersOutboxCronConsumer,
+		{
+			provide: QueueDepthPoller,
+			inject: [MetricsService],
+			useFactory: (metrics: MetricsService): QueueDepthPoller =>
+				new QueueDepthPoller({
+					managementUrl: process.env.RABBITMQ_MGMT_URL ?? '',
+					queues: USERS_QUEUES,
+					gauge: metrics.rmqQueueDepth
+				})
+		}
 	]
 })
 export class UsersModule {}

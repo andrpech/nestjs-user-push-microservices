@@ -205,7 +205,7 @@ The monolith is decomposed into three deployable apps with no business code chan
 
 ---
 
-## Phase 8: Metrics (Prometheus)
+## ✅ Phase 8: Metrics (Prometheus)
 
 **User stories**: 29
 
@@ -215,14 +215,14 @@ Prometheus container added to the infra compose. `prom-client` integrated in eac
 
 ### Acceptance criteria
 
-- [ ] `make up-all` brings up Prometheus container; scrape targets visible in Prometheus UI (Status → Targets), all 3 apps reporting "up"
-- [ ] `/metrics` endpoint on each app returns 200 with valid Prometheus text exposition format
-- [ ] After running smoke test, `notifications_failed_total` counter is queryable and shows 0 (happy path) or N (failure path) values
-- [ ] `prisma_request_duration_ms` histogram shows buckets populated by Phase 2-7 query activity
-- [ ] `rmq_queue_depth{queue="notifier.push-send"}` gauge reflects actual queue depth observable in RMQ UI
-- [ ] Standard Node metrics visible (RSS memory, event loop lag, etc.)
-- [ ] Metric labels do not include high-cardinality data (no `userId`, no `notificationId` in labels)
-- [ ] Phase 7's smoke test still passes; `/metrics` adds no measurable latency to other endpoints
+- [x] `make up-all` brings up Prometheus container; scrape targets visible in Prometheus UI (Status → Targets), all 3 apps reporting "up" _(5 active targets up — both replicas of users + notifier via Docker DNS-SD, scheduler static)_
+- [x] `/metrics` endpoint on each app returns 200 with valid Prometheus text exposition format
+- [x] After running smoke test, `notifications_failed_total` counter is queryable and shows 0 (happy path) or N (failure path) values _(verified: induced one webhook failure → `notifications_failed_total{reason="webhook_failure"} = 1`)_
+- [x] `prisma_request_duration_ms` histogram shows buckets populated by Phase 2-7 query activity _(verified — 105+ observations across `model={raw, User, Notification}`)_
+- [x] `rmq_queue_depth{queue="notifier.push-send"}` gauge reflects actual queue depth observable in RMQ UI _(verified — gauge shows 0 for push-send + matching values for cron/dlq vs. RMQ UI)_
+- [x] Standard Node metrics visible (RSS memory, event loop lag, etc.)
+- [x] Metric labels do not include high-cardinality data (no `userId`, no `notificationId` in labels) _(custom metrics use only `reason`, `model`, `operation`, `queue` labels)_
+- [x] Phase 7's smoke test still passes; `/metrics` adds no measurable latency to other endpoints
 
 ---
 

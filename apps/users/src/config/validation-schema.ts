@@ -10,7 +10,8 @@ export const UsersConfigSchema = z.strictObject({
 		writeUrl: z.string().min(1)
 	}),
 	rabbitmq: z.strictObject({
-		url: z.string().min(1)
+		url: z.string().min(1),
+		mgmtUrl: z.string().min(1)
 	}),
 	outbox: z.strictObject({
 		batchSize: z.number().int().min(1).max(10_000),

@@ -8,20 +8,25 @@ type ExtensibleClient = {
 
 type ClientConstructor<T extends ExtensibleClient> = new (opts: { datasourceUrl: string }) => T
 
+export type PrismaQueryEvent = {
+	model: string
+	operation: string
+	durationMs: number
+}
+
+export type QueryObserver = (event: PrismaQueryEvent) => void
+
 /**
  * Wraps a generated PrismaClient with $extends-based instrumentation.
  *
  * Phase 2: pino query logging at debug (>500ms → info).
- * Phase 4: replaced with OTel auto-instrumentation.
- *
- * The cast back to T is sound because we add no new methods via $extends —
- * only query-side instrumentation. If consumers ever add methods via this
- * factory, the cast becomes lossy and needs revisiting.
+ * Phase 8: optional QueryObserver hook for metrics — apps pass in their MetricsService observer.
  */
 export const createExtendedPrismaClient = <T extends ExtensibleClient>(
 	Ctor: ClientConstructor<T>,
 	url: string,
-	logger: Logger
+	logger: Logger,
+	observer?: QueryObserver
 ): T => {
 	if (!url) {
 		throw new Error('Prisma client URL is empty')
@@ -53,6 +58,8 @@ export const createExtendedPrismaClient = <T extends ExtensibleClient>(
 					} else {
 						logger.debug?.(`prisma query ${JSON.stringify(payload)}`)
 					}
+
+					observer?.({ model: model ?? 'raw', operation, durationMs: duration })
 				})
 			}
 		}

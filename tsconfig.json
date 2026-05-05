@@ -34,7 +34,9 @@
 			"@app/database-core": ["libs/database-core/src"],
 			"@app/database-core/*": ["libs/database-core/src/*"],
 			"@app/rmq": ["libs/rmq/src"],
-			"@app/rmq/*": ["libs/rmq/src/*"]
+			"@app/rmq/*": ["libs/rmq/src/*"],
+			"@app/metrics": ["libs/metrics/src"],
+			"@app/metrics/*": ["libs/metrics/src/*"]
 		}
 	},
 	"include": ["apps/**/*.ts", "libs/**/*.ts"],
