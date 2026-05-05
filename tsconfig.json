@@ -33,8 +33,6 @@
 			"@app/zod-validation/*": ["libs/zod-validation/src/*"],
 			"@app/database-core": ["libs/database-core/src"],
 			"@app/database-core/*": ["libs/database-core/src/*"],
-			"@app/config": ["libs/config/src"],
-			"@app/config/*": ["libs/config/src/*"],
 			"@app/rmq": ["libs/rmq/src"],
 			"@app/rmq/*": ["libs/rmq/src/*"]
 		}

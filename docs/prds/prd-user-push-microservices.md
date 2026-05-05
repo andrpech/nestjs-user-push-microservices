@@ -137,7 +137,7 @@ The system ships in six phases: (1) scaffolding, (2) monolith — all three modu
 
 ### Configuration
 
-- Each app has its own `.env` and its own zod-validated `ConfigSchema` composed from building blocks shared via `@app/config`.
+- Each app has its own `.env` and its own zod-validated `ConfigSchema` defined directly in `apps/<app>/src/config/validation-schema.ts` using `zod`. No shared config lib — env schemas belong to the app that owns those env vars.
 - Validation runs on boot via `registerAs('app', () => { ... ConfigSchema.parse(config) })`. App fails to start on any env misconfig.
 - Typed DI: services inject `@Inject(ConfigurationInjectKey) private readonly config: ConfigurationType` and access nested config (`this.config.cron.usersExpr`).
 - All compose hostnames (`postgres`, `rabbitmq`) are baked into `.env` directly; running outside compose requires manual env override.
@@ -170,7 +170,7 @@ The system ships in six phases: (1) scaffolding, (2) monolith — all three modu
 - **`RmqProducer<T>` base class** — encapsulates confirm-channel acquisition, mandatory flag, return listener, and the standard message properties (persistent, messageId, contentType). Subclasses provide an exchange and routing key via decorator.
 - **`createExtendedPrismaClient` factory** — encapsulates `$extends` instrumentation (pino query logging in Phase 2; OTel in Phase 4) and the cast-back-to-PrismaClient mechanics. Each app wires it once per Read/Write client.
 - **`RmqHealthIndicator`** — terminus-style indicator wrapping the connection manager's connection state. Reusable across all three apps.
-- **Config building-block schemas** — `AppSchema`, `DatabaseSchema`, `RmqSchema`, `NotificationSchema`, `CronSchema`, `WebhookSchema` exported from `@app/config`. Each app composes only what it needs.
+- **Per-app config schema** — each app defines its own `ConfigSchema` directly in `src/config/validation-schema.ts` using `zod`. Env var names are explicit in each app's schema; no shared building blocks.
 
 ### Process model and deployment
 

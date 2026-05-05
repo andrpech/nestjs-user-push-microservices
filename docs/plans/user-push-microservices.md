@@ -39,7 +39,7 @@ Durable decisions that apply across all phases. Established during the design gr
   - Webhook: `Idempotency-Key: <notificationId>` header on every POST
   - Outbox publish: at-least-once accepted (downstream `userId @unique` dedupes)
 - **Commit-then-publish**: claim TX commits before publish for both outbox flows. Publish failure → row stays "claimed" → 5-min stuck-recovery sweeps it back. Publisher confirms required for both.
-- **Configuration**: per-app `.env` and per-app zod-validated `ConfigSchema` composed from `@app/config` building blocks. `ConfigSchema.parse()` runs in `registerAs` factory at boot — invalid env crashes the app.
+- **Configuration**: per-app `.env` and per-app zod-validated `ConfigSchema` defined directly in `apps/<app>/src/config/validation-schema.ts` using `zod`. `ConfigSchema.parse()` runs in `registerAs` factory at boot — invalid env crashes the app. `libs/config` is intentionally empty — env schemas belong to the app that owns those env vars.
 - **ID generation**: ULID, app-generated, used as PK across both schemas and as `messageId` on every RMQ publish.
 - **Logging**: `nestjs-pino` everywhere with structured bindings: `reqId` (HTTP edge), `messageId`/`queue` (consumer edge), `userId`/`notificationId` (domain).
 - **Health**: `/lhealth` synchronous, no checks. `/rhealth` via `@nestjs/terminus`, dep checks added incrementally per phase.
@@ -71,7 +71,7 @@ The empty monorepo skeleton that everything else hangs from. npm workspaces with
 
 ---
 
-## Phase 2: User intake
+## ✅ Phase 2: User intake
 
 **User stories**: 1, 2, 3
 
@@ -81,15 +81,15 @@ Users module exposes `POST /users`. Strict zod validation (1-64 char `name`, no 
 
 ### Acceptance criteria
 
-- [ ] `curl -X POST http://localhost:3000/users -H 'Content-Type: application/json' -d '{"name":"andrii"}'` returns 201 with `{id, name, createdAt}` where `id` is a ULID
-- [ ] `POST /users` with `{}` returns 400 with zod error detail
-- [ ] `POST /users` with `{"name":""}` returns 400
-- [ ] `POST /users` with a 65-char name returns 400
-- [ ] `POST /users` with `{"name":"x", "extra":"y"}` returns 400 (strict mode)
-- [ ] Row visible in `users` table with `publishedAt IS NULL`, `publishing_started_at IS NULL`
-- [ ] `GET /rhealth` now reports two healthy `users-read-db` and `users-write-db` checks
-- [ ] Migration applies on app boot via `prisma migrate deploy` (no manual step)
-- [ ] Pino log line for the request includes `reqId` and `userId` bindings
+- [x] `curl -X POST http://localhost:3000/users -H 'Content-Type: application/json' -d '{"name":"andrii"}'` returns 201 with `{id, name, createdAt}` where `id` is a ULID
+- [x] `POST /users` with `{}` returns 400 with zod error detail
+- [x] `POST /users` with `{"name":""}` returns 400
+- [x] `POST /users` with a 65-char name returns 400
+- [x] `POST /users` with `{"name":"x", "extra":"y"}` returns 400 (strict mode)
+- [x] Row visible in `users` table with `publishedAt IS NULL`, `publishing_started_at IS NULL`
+- [x] `GET /rhealth` now reports two healthy `users-read-db` and `users-write-db` checks
+- [x] Migration applies on app boot via `prisma migrate deploy` (no manual step)
+- [x] Pino log line for the request includes `reqId` and `userId` bindings
 
 ---
 

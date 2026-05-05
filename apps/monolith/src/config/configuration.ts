@@ -7,6 +7,10 @@ export const configuration = registerAs('app', () => {
 		app: {
 			env: process.env.NODE_ENV as 'development' | 'production' | 'test',
 			port: Number.parseInt(process.env.PORT ?? '3000', 10)
+		},
+		usersDb: {
+			readUrl: process.env.USERS_READ_DB_URL ?? '',
+			writeUrl: process.env.USERS_WRITE_DB_URL ?? ''
 		}
 	}
 
