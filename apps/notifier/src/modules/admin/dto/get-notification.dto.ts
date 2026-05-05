@@ -19,3 +19,9 @@ export const ListNotificationsQuerySchema = z.strictObject({
 })
 
 export type ListNotificationsQuery = z.infer<typeof ListNotificationsQuerySchema>
+
+export const RepublishInboxDlqBodySchema = z.strictObject({
+	ids: z.array(UlidSchema).min(1).max(1000).optional()
+})
+
+export type RepublishInboxDlqBody = z.infer<typeof RepublishInboxDlqBodySchema>

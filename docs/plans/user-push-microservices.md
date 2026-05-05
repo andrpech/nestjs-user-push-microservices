@@ -287,24 +287,24 @@ Notifier app gains an HTTP layer (`/admin/*` controller; existing Fastify boot s
 
 ---
 
-## Phase 12: Admin — retry + DLQ republish
+## ✅ Phase 12: Admin — retry + DLQ republish
 
 **User stories**: 16, 17
 
 ### What to build
 
-Two write endpoints. `POST /admin/notifications/:id/retry`: atomic UPDATE — `IF status='FAILED' THEN status='PENDING', attempts=0, processing_started_at=NULL, last_error=NULL, history = history || '[{"at":"...","type":"MANUAL_RETRY"}]'::jsonb`; returns 200 with new row state. If status≠FAILED → 409 Conflict. If row missing → 404. `POST /admin/dlq/inbox/republish`: drains messages from `notifier.user-created.dlq` (or selectively by IDs from optional request body `{ ids: [...] }`) and republishes each to `users.events / user.created` via the standard producer. On publish confirm, ack the DLQ message. On publish failure, leave DLQ message intact (do NOT route through retry). Returns 200 with `{ republished: N, failed: N }` summary.
+Two write endpoints. `POST /admin/notifications/:id/retry`: atomic conditional UPDATE keyed on `status='FAILED'` — sets status=PENDING, attempts=0, clears processing_started_at + last_error, appends a `MANUAL_RETRY` history entry, returns the new row. If the conditional UPDATE matches no rows, a follow-up SELECT decides 404 (row missing) vs 409 (status≠FAILED). `POST /admin/dlq/inbox/republish`: drains `notifier.user-created.dlq` (or selectively by `userId` from optional body `{ ids: [...] }`) and republishes matched messages via a notifier-side `UserCreatedProducer` to `users.events / user.created`. Unmatched and invalid messages are _re-published to `notifications.dlx`_ (recreating the entry at the tail) rather than nack-requeued — RabbitMQ requeues at the head and would loop the drain on the same message. Selective filter matches the **payload's `userId`**, not the AMQP `messageId` — `messageId` isn't always set (e.g., messages planted via the management UI). The drain takes one pass capped by `checkQueue.messageCount`. Returns `{republished, failed, skipped}`. The `BaseZodValidationInterceptor` change from Phase 11 (folding `request.params` into the validation payload) lets the same `GetNotificationParamSchema` validate the retry route's `:id`.
 
 ### Acceptance criteria
 
-- [ ] After producing a FAILED row in Phase 6, `POST /admin/notifications/:id/retry` returns 200 and the row transitions through PENDING → PROCESSING → SENT via the normal cron-driven flow within ~5-10s
-- [ ] History array on the retried row contains a `MANUAL_RETRY` entry between the original FAILED and the new PUSH_SENT
-- [ ] `POST /admin/notifications/:id/retry` on a PENDING/PROCESSING/SENT row returns 409 with no state change
-- [ ] `POST /admin/notifications/{nonexistent}/retry` returns 404
-- [ ] After producing DLQ messages in Phase 6, `POST /admin/dlq/inbox/republish` (with empty body) drains the DLQ and republishes to `users.events`
-- [ ] Selective republish via `{ ids: [...] }` body publishes only the matched messages, leaves others in DLQ
-- [ ] Republished messages flow through the normal inbox path; if the underlying issue is still present, they re-enter the retry ring and may end up in DLQ again — that's acceptable (no infinite loop because of x-death cap)
-- [ ] Endpoints return 4xx for malformed input (zod-validated)
+- [x] After producing a FAILED row in Phase 6, `POST /admin/notifications/:id/retry` returns 200 and the row transitions through PENDING → PROCESSING → SENT via the normal cron-driven flow within ~5-10s _(verified: `01KQW6RQS9R3YHTWBKBAPEP12G` FAILED → 200 with status=PENDING → SENT in ~6s)_
+- [x] History array on the retried row contains a `MANUAL_RETRY` entry between the original FAILED and the new PUSH*SENT *(verified: `[CREATED, CLAIMED_BY_TICK, PUSH_ATTEMPT×5, MANUAL_RETRY, CLAIMED_BY_TICK, PUSH_ATTEMPT, PUSH_SENT]`)\_
+- [x] `POST /admin/notifications/:id/retry` on a PENDING/PROCESSING/SENT row returns 409 with no state change _(verified: SENT row → 409 `is SENT, can only retry FAILED`, history unchanged at 4 entries)_
+- [x] `POST /admin/notifications/{nonexistent}/retry` returns 404 _(verified)_
+- [x] After producing DLQ messages, `POST /admin/dlq/inbox/republish` (with empty body) drains the DLQ and republishes to `users.events` _(verified: 4 in DLQ → `{republished:3, failed:1, skipped:0}` → 3 PENDING rows transitioned to SENT, malformed message re-DLX-ed and stays in DLQ)_
+- [x] Selective republish via `{ ids: [...] }` body publishes only the matched messages, leaves others in DLQ _(verified: `{"ids":["01KQWC9WNTXQRNFJMKW4246GGZ"]}` → `republished:1, failed:1, skipped:2`; only the matched user got a Notification row)_
+- [x] Republished messages flow through the normal inbox path; if the underlying issue is still present, they re-enter the retry ring and may end up in DLQ again _(by-construction — republish goes to the standard `users.events` exchange, normal consumer ack/retry/DLQ semantics apply)_
+- [x] Endpoints return 4xx for malformed input (zod-validated) _(verified: `{"ids":"single"}` → 400 expected array; `{"ids":["bad-ulid"]}` → 400 must be 26-char ULID; `{"foo":"bar"}` → 400 unrecognized key; bad-ULID `:id` → 400)_
 
 ---
 
