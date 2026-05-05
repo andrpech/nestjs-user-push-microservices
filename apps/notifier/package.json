@@ -15,6 +15,7 @@
 		"@app/database-core": "*",
 		"@app/metrics": "*",
 		"@app/rmq": "*",
+		"@app/tracing": "*",
 		"@app/zod-validation": "*",
 		"@prisma/client": "^6.19.3",
 		"prisma": "^6.19.3",

@@ -10,6 +10,7 @@ COPY libs/zod-validation/package.json ./libs/zod-validation/
 COPY libs/database-core/package.json ./libs/database-core/
 COPY libs/rmq/package.json ./libs/rmq/
 COPY libs/metrics/package.json ./libs/metrics/
+COPY libs/tracing/package.json ./libs/tracing/
 
 RUN npm install --no-audit --no-fund
 

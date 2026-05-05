@@ -10,3 +10,13 @@ datasources:
     editable: false
     jsonData:
       timeInterval: 5s
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: nupm-jaeger
+
+  - name: Jaeger
+    uid: nupm-jaeger
+    type: jaeger
+    access: proxy
+    url: http://jaeger:16686
+    editable: false

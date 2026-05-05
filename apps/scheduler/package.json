@@ -12,6 +12,7 @@
 		"@app/common": "*",
 		"@app/metrics": "*",
 		"@app/rmq": "*",
+		"@app/tracing": "*",
 		"@nestjs/common": "^11.0.0",
 		"@nestjs/config": "^4.0.0",
 		"@nestjs/core": "^11.0.0",

@@ -36,7 +36,9 @@
 			"@app/rmq": ["libs/rmq/src"],
 			"@app/rmq/*": ["libs/rmq/src/*"],
 			"@app/metrics": ["libs/metrics/src"],
-			"@app/metrics/*": ["libs/metrics/src/*"]
+			"@app/metrics/*": ["libs/metrics/src/*"],
+			"@app/tracing": ["libs/tracing/src"],
+			"@app/tracing/*": ["libs/tracing/src/*"]
 		}
 	},
 	"include": ["apps/**/*.ts", "libs/**/*.ts"],

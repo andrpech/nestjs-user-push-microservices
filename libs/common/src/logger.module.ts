@@ -1,7 +1,22 @@
 import { Module } from '@nestjs/common'
+import { trace } from '@opentelemetry/api'
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino'
 
 import { ulid } from './ulid'
+
+// Pulls active span context onto every log line. Keys match OpenTelemetry
+// log-correlation conventions used by Tempo/Loki/Jaeger.
+const traceMixin = (): Record<string, string> => {
+	const span = trace.getActiveSpan()
+	if (!span) return {}
+	const ctx = span.spanContext()
+	if (!ctx.traceId) return {}
+	return {
+		trace_id: ctx.traceId,
+		span_id: ctx.spanId,
+		trace_flags: ctx.traceFlags.toString(16).padStart(2, '0')
+	}
+}
 
 @Module({
 	imports: [
@@ -9,6 +24,7 @@ import { ulid } from './ulid'
 			pinoHttp: {
 				genReqId: (): string => ulid(),
 				customProps: (): Record<string, unknown> => ({}),
+				mixin: traceMixin,
 				transport:
 					process.env.NODE_ENV === 'production'
 						? undefined

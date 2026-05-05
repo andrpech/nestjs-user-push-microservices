@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import '@app/tracing/register'
 
 import { Logger as BaseLogger } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'

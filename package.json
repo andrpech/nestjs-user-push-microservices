@@ -8,7 +8,7 @@
 		"libs/*"
 	],
 	"scripts": {
-		"build:libs": "npm run build -w @app/common -w @app/zod-validation -w @app/database-core -w @app/rmq -w @app/metrics",
+		"build:libs": "npm run build -w @app/common -w @app/zod-validation -w @app/database-core -w @app/rmq -w @app/metrics -w @app/tracing",
 		"build": "npm run build:libs",
 		"format": "prettier --cache --write .",
 		"format:check": "prettier --cache --check .",

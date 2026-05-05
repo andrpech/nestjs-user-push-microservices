@@ -27,6 +27,7 @@ Then:
 - RabbitMQ UI at <http://localhost:15672> (`guest` / `guest`) — watch `system.cron`, `users.events`, and the `users.outbox-cron` queue
 - Prometheus at <http://localhost:9090> — scrape targets for users (×2), notifier (×2), scheduler
 - Grafana at <http://localhost:3001> (`admin` / `admin`, anonymous viewer enabled) — `nupm/` folder with 4 auto-provisioned dashboards: service overview, notification flow, failure deep-dive, database
+- Jaeger UI at <http://localhost:16686> — full trace lifecycle across `users` → RMQ → `notifier` → webhook; every pino log line carries `trace_id` / `span_id`
 
 ## Env templates
 
@@ -63,7 +64,8 @@ libs/{common,zod-validation,database-core,rmq}/  # shared libraries
 infra/nginx/nginx.conf        # ingress: routes /users + /lhealth/rhealth → users, /admin/* → notifier
 infra/postgres/init.sql       # creates `users` and `notifications` databases
 infra/prometheus/prometheus.yml  # scrape config: users + notifier via Docker DNS-SD, scheduler static
-infra/grafana/                # provisioning: datasources + dashboards loader + 4 dashboard JSONs
+infra/grafana/                # provisioning: datasources (prometheus + jaeger) + dashboards loader + 4 dashboard JSONs
+libs/tracing/                 # OTel SDK side-effect bootstrap (`import '@app/tracing/register'`)
 docs/INITIAL_PLAN.md          # technical design (markdown blueprint)
 docs/prds/                    # product requirement docs
 docs/plans/                   # phased implementation plan
@@ -84,7 +86,7 @@ Tracked in `docs/plans/user-push-microservices.md` (13 phases). At a glance:
 - [x] Phase 7 — Split into 3 apps (users, notifier, scheduler) + 2 migrators with full `depends_on` boot chain
 - [x] Phase 8 — Metrics (Prometheus): `/metrics` per app, custom counters/histogram/gauges, RMQ queue-depth poller
 - [x] Phase 9 — Dashboards (Grafana): datasource + 4 dashboards provisioned from disk
-- [ ] Phase 10 — Distributed tracing (OpenTelemetry)
+- [x] Phase 10 — Distributed tracing (OpenTelemetry): NodeSDK bootstrap, auto-instrumentation, Jaeger backend, trace context propagated across RMQ + injected into pino logs
 - [ ] Phase 11 — Admin: detail + list
 - [ ] Phase 12 — Admin: retry + DLQ republish
 - [ ] Phase 13 — Optional remainder (replicas, K8s, leader-election)
