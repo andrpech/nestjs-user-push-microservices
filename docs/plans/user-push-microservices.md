@@ -226,23 +226,23 @@ Prometheus container added to the infra compose. `prom-client` integrated in eac
 
 ---
 
-## Phase 9: Dashboards (Grafana)
+## ✅ Phase 9: Dashboards (Grafana)
 
 **User stories**: 29
 
 ### What to build
 
-Grafana container added to infra compose, provisioned via dashboards-as-code in `infra/grafana/`. Datasource provisioning points Grafana at the Prometheus container. Dashboards committed: (1) **Service overview** — request rate, error rate, latency p50/p95/p99 per app, RSS memory, event loop lag; (2) **Notification flow** — created/sec, sent/sec, failed/sec, redrive/sec, queue depths over time; (3) **Failure deep-dive** — `notifications_failed_total` by reason, `notification_redrive_count` distribution, top errors from logs (if Loki added in Phase 13); (4) **Database** — `prisma_request_duration_ms` percentiles by model and operation, connection pool saturation.
+Grafana container added to infra compose, provisioned via dashboards-as-code in `infra/grafana/`. Datasource provisioning points Grafana at the Prometheus container. Dashboards committed: (1) **Service overview** — request rate, error rate, latency p50/p95/p99 per app, RSS memory, event loop lag; (2) **Notification flow** — created/sec, sent/sec, failed/sec, redrive/sec, queue depths over time; (3) **Failure deep-dive** — `notifications_failed_total` by reason, `notification_redrive_count` distribution, top errors from logs (if Loki added in Phase 13); (4) **Database** — `prisma_request_duration_ms` percentiles by model and operation, connection pool saturation. Two new low-cardinality counters were added to feed the flow dashboard (`notifications_created_total`, `notifications_sent_total`) plus an `http_request_duration_ms{method,status_code}` histogram populated by a Fastify `onResponse` hook from `MetricsModule`.
 
 ### Acceptance criteria
 
-- [ ] `make up-all` brings up Grafana with dashboards auto-provisioned (visible at `localhost:3001` or chosen port)
-- [ ] All four dashboards render with live data after a smoke test cycle
-- [ ] Notification flow dashboard shows a clear before/after when running `POST /users` → wait → check webhook (sent counter increments)
-- [ ] Failure deep-dive dashboard shows clear activity when running the Phase 6 force-fail scenarios
-- [ ] Dashboards committed as JSON in the repo, not configured manually in Grafana UI (provisioning verified by deleting Grafana volume and re-bringing up — dashboards still appear)
-- [ ] Datasource is provisioned (no manual "Add data source" step)
-- [ ] Dashboards survive container restart
+- [x] `make up-all` brings up Grafana with dashboards auto-provisioned (visible at `localhost:3001`) _(Grafana lives in `docker-compose.infra.yml` and starts with `make infra-up`; provisioning verified via `/api/search?type=dash-db`)_
+- [x] All four dashboards render with live data after a smoke test cycle _(verified via Prometheus API queries backing every panel — HTTP rate by job, p95 latency by job, sent/created/failed totals, queue depths, prisma p50/p95/p99 by model+operation)_
+- [x] Notification flow dashboard shows a clear before/after when running `POST /users` → wait → check webhook (sent counter increments) _(5 POSTs → `notifications_created_total=5`, `notifications_sent_total=5`)_
+- [x] Failure deep-dive dashboard shows clear activity when running the Phase 6 force-fail scenarios _(killed catcher, posted 2 → `notifications_failed_total{reason="webhook_failure"}=2`, DLQ depth gauge populated)_
+- [x] Dashboards committed as JSON in the repo, not configured manually in Grafana UI (provisioning verified by deleting Grafana volume and re-bringing up — dashboards still appear) _(verified — `docker volume rm` + recreate → all 4 dashboards re-provision from `infra/grafana/dashboards/*.json`)_
+- [x] Datasource is provisioned (no manual "Add data source" step) _(`infra/grafana/provisioning/datasources/prometheus.yml`, uid `nupm-prom`, all dashboards reference this uid)_
+- [x] Dashboards survive container restart _(`docker restart nupm-grafana` → all 4 dashboards still listed)_
 
 ---
 

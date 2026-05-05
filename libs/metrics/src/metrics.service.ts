@@ -11,14 +11,29 @@ import type { PrismaQueryEvent } from './types'
 export class MetricsService {
 	readonly registry: Registry
 
+	readonly notificationsCreatedTotal: Counter<string>
+	readonly notificationsSentTotal: Counter<string>
 	readonly notificationsFailedTotal: Counter<'reason'>
 	readonly notificationRedriveCount: Histogram<string>
 	readonly prismaRequestDurationMs: Histogram<'model' | 'operation'>
 	readonly rmqQueueDepth: Gauge<'queue'>
+	readonly httpRequestDurationMs: Histogram<'method' | 'status_code'>
 
 	constructor() {
 		this.registry = new Registry()
 		collectDefaultMetrics({ register: this.registry })
+
+		this.notificationsCreatedTotal = new Counter({
+			name: 'notifications_created_total',
+			help: 'Notifications inserted (excludes dedupe hits on userId @unique)',
+			registers: [this.registry]
+		})
+
+		this.notificationsSentTotal = new Counter({
+			name: 'notifications_sent_total',
+			help: 'Notifications transitioned to terminal SENT',
+			registers: [this.registry]
+		})
 
 		this.notificationsFailedTotal = new Counter({
 			name: 'notifications_failed_total',
@@ -46,6 +61,14 @@ export class MetricsService {
 			name: 'rmq_queue_depth',
 			help: 'Current depth (messages) of an RMQ queue, polled from the management API',
 			labelNames: ['queue'] as const,
+			registers: [this.registry]
+		})
+
+		this.httpRequestDurationMs = new Histogram({
+			name: 'http_request_duration_ms',
+			help: 'HTTP request duration by method + status code',
+			labelNames: ['method', 'status_code'] as const,
+			buckets: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 5000],
 			registers: [this.registry]
 		})
 	}

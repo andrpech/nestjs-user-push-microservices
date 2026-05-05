@@ -1,0 +1,102 @@
+{
+	"annotations": { "list": [] },
+	"editable": false,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 1,
+	"id": null,
+	"uid": "nupm-database",
+	"title": "NUPM — Database",
+	"tags": ["nupm"],
+	"timezone": "browser",
+	"schemaVersion": 39,
+	"refresh": "10s",
+	"time": { "from": "now-30m", "to": "now" },
+	"templating": { "list": [] },
+	"panels": [
+		{
+			"type": "timeseries",
+			"title": "Prisma query rate (per model+operation)",
+			"id": 1,
+			"gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "sum by (model, operation) (rate(prisma_request_duration_ms_count[1m]))",
+					"legendFormat": "{{model}}.{{operation}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "Prisma p50 latency (ms, by model+operation)",
+			"id": 2,
+			"gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "histogram_quantile(0.50, sum by (le, model, operation) (rate(prisma_request_duration_ms_bucket[5m])))",
+					"legendFormat": "{{model}}.{{operation}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "Prisma p95 latency (ms, by model+operation)",
+			"id": 3,
+			"gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "histogram_quantile(0.95, sum by (le, model, operation) (rate(prisma_request_duration_ms_bucket[5m])))",
+					"legendFormat": "{{model}}.{{operation}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "Prisma p99 latency (ms, by model+operation)",
+			"id": 4,
+			"gridPos": { "h": 9, "w": 24, "x": 0, "y": 18 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "histogram_quantile(0.99, sum by (le, model, operation) (rate(prisma_request_duration_ms_bucket[5m])))",
+					"legendFormat": "{{model}}.{{operation}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "Active handles + Node heap (proxy for pool / saturation)",
+			"id": 5,
+			"gridPos": { "h": 9, "w": 24, "x": 0, "y": 27 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "nodejs_active_handles_total",
+					"legendFormat": "{{job}} {{instance}} active handles",
+					"refId": "A"
+				},
+				{
+					"expr": "nodejs_heap_size_used_bytes",
+					"legendFormat": "{{job}} {{instance}} heap used",
+					"refId": "B"
+				}
+			]
+		}
+	]
+}

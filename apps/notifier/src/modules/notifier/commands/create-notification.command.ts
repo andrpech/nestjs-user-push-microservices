@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common'
 
 import { Command, ulid } from '@app/common'
+import { MetricsService } from '@app/metrics'
 import { Prisma } from '../../../../prisma/generated'
 import { NotificationsWritePrismaClient } from '../../../database/notifications.clients'
 import { historyEntry } from '../history'
@@ -22,7 +23,8 @@ export class CreateNotificationCommand implements Command<
 > {
 	constructor(
 		@Inject(NotificationsWritePrismaClient)
-		private readonly write: NotificationsWritePrismaClient
+		private readonly write: NotificationsWritePrismaClient,
+		private readonly metrics: MetricsService
 	) {}
 
 	async execute({ userId, name }: CreateNotificationInput): Promise<CreateNotificationOutput> {
@@ -30,6 +32,7 @@ export class CreateNotificationCommand implements Command<
 			const row = await this.write.notification.create({
 				data: { id: ulid(), userId, name, history: [historyEntry('CREATED')] }
 			})
+			this.metrics.notificationsCreatedTotal.inc()
 			return { notificationId: row.id, deduped: false }
 		} catch (error) {
 			if (this.isUniqueViolation(error)) {

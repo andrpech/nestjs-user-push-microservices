@@ -1,0 +1,107 @@
+{
+	"annotations": { "list": [] },
+	"editable": false,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 1,
+	"id": null,
+	"uid": "nupm-service-overview",
+	"title": "NUPM — Service overview",
+	"tags": ["nupm"],
+	"timezone": "browser",
+	"schemaVersion": 39,
+	"refresh": "10s",
+	"time": { "from": "now-15m", "to": "now" },
+	"templating": { "list": [] },
+	"panels": [
+		{
+			"type": "timeseries",
+			"title": "HTTP request rate (req/s, by app)",
+			"id": 1,
+			"gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "sum by (job) (rate(http_request_duration_ms_count[1m]))",
+					"legendFormat": "{{job}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "HTTP error rate (5xx req/s, by app)",
+			"id": 2,
+			"gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "sum by (job) (rate(http_request_duration_ms_count{status_code=~\"5..\"}[1m]))",
+					"legendFormat": "{{job}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "HTTP latency p50 / p95 / p99 (ms, all apps)",
+			"id": 3,
+			"gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "histogram_quantile(0.50, sum by (le, job) (rate(http_request_duration_ms_bucket[5m])))",
+					"legendFormat": "{{job}} p50",
+					"refId": "A"
+				},
+				{
+					"expr": "histogram_quantile(0.95, sum by (le, job) (rate(http_request_duration_ms_bucket[5m])))",
+					"legendFormat": "{{job}} p95",
+					"refId": "B"
+				},
+				{
+					"expr": "histogram_quantile(0.99, sum by (le, job) (rate(http_request_duration_ms_bucket[5m])))",
+					"legendFormat": "{{job}} p99",
+					"refId": "C"
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "RSS memory (bytes)",
+			"id": 4,
+			"gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "process_resident_memory_bytes",
+					"legendFormat": "{{job}} {{instance}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "Event loop lag (s)",
+			"id": 5,
+			"gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "nodejs_eventloop_lag_seconds",
+					"legendFormat": "{{job}} {{instance}}",
+					"refId": "A"
+				}
+			]
+		}
+	]
+}

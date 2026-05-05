@@ -1,0 +1,104 @@
+{
+	"annotations": { "list": [] },
+	"editable": false,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 1,
+	"id": null,
+	"uid": "nupm-notification-flow",
+	"title": "NUPM — Notification flow",
+	"tags": ["nupm"],
+	"timezone": "browser",
+	"schemaVersion": 39,
+	"refresh": "10s",
+	"time": { "from": "now-15m", "to": "now" },
+	"templating": { "list": [] },
+	"panels": [
+		{
+			"type": "stat",
+			"title": "Created (rate / 5m)",
+			"id": 1,
+			"gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ops", "decimals": 3 }, "overrides": [] },
+			"options": { "graphMode": "area", "colorMode": "value" },
+			"targets": [{ "expr": "sum(rate(notifications_created_total[5m]))", "refId": "A" }]
+		},
+		{
+			"type": "stat",
+			"title": "Sent (rate / 5m)",
+			"id": 2,
+			"gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ops", "decimals": 3 }, "overrides": [] },
+			"options": { "graphMode": "area", "colorMode": "value" },
+			"targets": [{ "expr": "sum(rate(notifications_sent_total[5m]))", "refId": "A" }]
+		},
+		{
+			"type": "stat",
+			"title": "Failed (rate / 5m)",
+			"id": 3,
+			"gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ops", "decimals": 3 }, "overrides": [] },
+			"options": { "graphMode": "area", "colorMode": "value" },
+			"targets": [{ "expr": "sum(rate(notifications_failed_total[5m]))", "refId": "A" }]
+		},
+		{
+			"type": "stat",
+			"title": "Redrives (rate / 5m)",
+			"id": 4,
+			"gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ops", "decimals": 3 }, "overrides": [] },
+			"options": { "graphMode": "area", "colorMode": "value" },
+			"targets": [{ "expr": "sum(rate(notification_redrive_count_count[5m]))", "refId": "A" }]
+		},
+		{
+			"type": "timeseries",
+			"title": "Notification flow (per-second)",
+			"id": 5,
+			"gridPos": { "h": 9, "w": 24, "x": 0, "y": 4 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "sum(rate(notifications_created_total[1m]))",
+					"legendFormat": "created/s",
+					"refId": "A"
+				},
+				{
+					"expr": "sum(rate(notifications_sent_total[1m]))",
+					"legendFormat": "sent/s",
+					"refId": "B"
+				},
+				{
+					"expr": "sum(rate(notifications_failed_total[1m]))",
+					"legendFormat": "failed/s",
+					"refId": "C"
+				},
+				{
+					"expr": "sum(rate(notification_redrive_count_count[1m]))",
+					"legendFormat": "redrives/s",
+					"refId": "D"
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "RMQ queue depth",
+			"id": 6,
+			"gridPos": { "h": 9, "w": 24, "x": 0, "y": 13 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "max by (queue) (rmq_queue_depth)",
+					"legendFormat": "{{queue}}",
+					"refId": "A"
+				}
+			]
+		}
+	]
+}

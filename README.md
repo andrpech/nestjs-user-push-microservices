@@ -25,6 +25,8 @@ Then:
 - `curl http://localhost:3000/rhealth` → terminus check result (DBs + RabbitMQ)
 - `curl -X POST http://localhost:3000/users -H 'Content-Type: application/json' -d '{"name":"andrii"}'` → 201 with `{id,name,createdAt}`
 - RabbitMQ UI at <http://localhost:15672> (`guest` / `guest`) — watch `system.cron`, `users.events`, and the `users.outbox-cron` queue
+- Prometheus at <http://localhost:9090> — scrape targets for users (×2), notifier (×2), scheduler
+- Grafana at <http://localhost:3001> (`admin` / `admin`, anonymous viewer enabled) — `nupm/` folder with 4 auto-provisioned dashboards: service overview, notification flow, failure deep-dive, database
 
 ## Env templates
 
@@ -60,6 +62,8 @@ apps/scheduler/               # cron tick producer (phase 7+; SINGLETON — do n
 libs/{common,zod-validation,database-core,rmq}/  # shared libraries
 infra/nginx/nginx.conf        # ingress: routes /users + /lhealth/rhealth → users, /admin/* → notifier
 infra/postgres/init.sql       # creates `users` and `notifications` databases
+infra/prometheus/prometheus.yml  # scrape config: users + notifier via Docker DNS-SD, scheduler static
+infra/grafana/                # provisioning: datasources + dashboards loader + 4 dashboard JSONs
 docs/INITIAL_PLAN.md          # technical design (markdown blueprint)
 docs/prds/                    # product requirement docs
 docs/plans/                   # phased implementation plan
@@ -79,7 +83,7 @@ Tracked in `docs/plans/user-push-microservices.md` (13 phases). At a glance:
 - [x] Phase 6 — Robustness: send-retry with per-message expiration, inbox DLX→retry→DLQ ring, stuck-recovery redrive cap
 - [x] Phase 7 — Split into 3 apps (users, notifier, scheduler) + 2 migrators with full `depends_on` boot chain
 - [x] Phase 8 — Metrics (Prometheus): `/metrics` per app, custom counters/histogram/gauges, RMQ queue-depth poller
-- [ ] Phase 9 — Dashboards (Grafana)
+- [x] Phase 9 — Dashboards (Grafana): datasource + 4 dashboards provisioned from disk
 - [ ] Phase 10 — Distributed tracing (OpenTelemetry)
 - [ ] Phase 11 — Admin: detail + list
 - [ ] Phase 12 — Admin: retry + DLQ republish

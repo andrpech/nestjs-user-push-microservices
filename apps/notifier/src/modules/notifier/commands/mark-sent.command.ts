@@ -26,6 +26,8 @@ export class MarkSentCommand implements Command<string, void> {
 			notificationId
 		)
 
+		this.metrics.notificationsSentTotal.inc()
+
 		if (rows[0]) {
 			this.metrics.notificationRedriveCount.observe(rows[0].redrive_count)
 		}

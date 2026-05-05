@@ -1,0 +1,108 @@
+{
+	"annotations": { "list": [] },
+	"editable": false,
+	"fiscalYearStartMonth": 0,
+	"graphTooltip": 1,
+	"id": null,
+	"uid": "nupm-failure-deep-dive",
+	"title": "NUPM — Failure deep-dive",
+	"tags": ["nupm"],
+	"timezone": "browser",
+	"schemaVersion": 39,
+	"refresh": "10s",
+	"time": { "from": "now-1h", "to": "now" },
+	"templating": { "list": [] },
+	"panels": [
+		{
+			"type": "timeseries",
+			"title": "notifications_failed_total (by reason)",
+			"id": 1,
+			"gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "sum by (reason) (rate(notifications_failed_total[1m]))",
+					"legendFormat": "{{reason}}",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"type": "stat",
+			"title": "Total failures (last 1h)",
+			"id": 2,
+			"gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+			"options": { "graphMode": "area", "colorMode": "value" },
+			"targets": [{ "expr": "sum(increase(notifications_failed_total[1h]))", "refId": "A" }]
+		},
+		{
+			"type": "stat",
+			"title": "Webhook-failure share (1h)",
+			"id": 3,
+			"gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+			"options": { "graphMode": "area", "colorMode": "value" },
+			"targets": [
+				{
+					"expr": "sum(increase(notifications_failed_total{reason=\"webhook_failure\"}[1h])) / clamp_min(sum(increase(notifications_failed_total[1h])), 1)",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"type": "bargauge",
+			"title": "notification_redrive_count distribution (cumulative)",
+			"id": 4,
+			"gridPos": { "h": 9, "w": 12, "x": 12, "y": 4 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+			"options": { "displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true },
+			"targets": [
+				{
+					"expr": "sum by (le) (notification_redrive_count_bucket)",
+					"legendFormat": "≤ {{le}}",
+					"refId": "A",
+					"format": "time_series",
+					"instant": true
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "Inbox DLQ depth",
+			"id": 5,
+			"gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "max(rmq_queue_depth{queue=\"notifier.user-created.dlq\"})",
+					"legendFormat": "DLQ depth",
+					"refId": "A"
+				}
+			]
+		},
+		{
+			"type": "timeseries",
+			"title": "Send-side retry queue depth",
+			"id": 6,
+			"gridPos": { "h": 9, "w": 12, "x": 12, "y": 13 },
+			"datasource": { "type": "prometheus", "uid": "nupm-prom" },
+			"fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+			"options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+			"targets": [
+				{
+					"expr": "max(rmq_queue_depth{queue=\"notifier.push-send.retry\"})",
+					"legendFormat": "push-send.retry depth",
+					"refId": "A"
+				}
+			]
+		}
+	]
+}
