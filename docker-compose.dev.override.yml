@@ -1,17 +1,59 @@
 services:
-  monolith:
+  users-migrator:
     build:
-      context: .
-      dockerfile: apps/monolith/Dockerfile
       target: builder
-    command: sh -c "npm run build:libs && cd apps/monolith && npx prisma migrate deploy --schema=./prisma/users/schema.prisma && npx prisma migrate deploy --schema=./prisma/notifications/schema.prisma && npx nest start --watch"
+
+  notifier-migrator:
+    build:
+      target: builder
+
+  users:
+    build:
+      target: builder
+    command: sh -c "npm run build:libs && cd apps/users && npx nest start --watch"
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: 'true'
+    ports:
+      - '3000:3000'
+    deploy:
+      replicas: 1
+    volumes:
+      - ./apps/users/src:/app/apps/users/src
+      - ./apps/users/tsconfig.json:/app/apps/users/tsconfig.json
+      - ./apps/users/nest-cli.json:/app/apps/users/nest-cli.json
+      - ./libs:/app/libs
+      - /app/node_modules
+      - /app/apps/users/node_modules
+
+  notifier:
+    build:
+      target: builder
+    command: sh -c "npm run build:libs && cd apps/notifier && npx nest start --watch"
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: 'true'
+    deploy:
+      replicas: 1
+    volumes:
+      - ./apps/notifier/src:/app/apps/notifier/src
+      - ./apps/notifier/tsconfig.json:/app/apps/notifier/tsconfig.json
+      - ./apps/notifier/nest-cli.json:/app/apps/notifier/nest-cli.json
+      - ./libs:/app/libs
+      - /app/node_modules
+      - /app/apps/notifier/node_modules
+
+  scheduler:
+    build:
+      target: builder
+    command: sh -c "npm run build:libs && cd apps/scheduler && npx nest start --watch"
     environment:
       NODE_ENV: development
       CHOKIDAR_USEPOLLING: 'true'
     volumes:
-      - ./apps/monolith/src:/app/apps/monolith/src
-      - ./apps/monolith/tsconfig.json:/app/apps/monolith/tsconfig.json
-      - ./apps/monolith/nest-cli.json:/app/apps/monolith/nest-cli.json
+      - ./apps/scheduler/src:/app/apps/scheduler/src
+      - ./apps/scheduler/tsconfig.json:/app/apps/scheduler/tsconfig.json
+      - ./apps/scheduler/nest-cli.json:/app/apps/scheduler/nest-cli.json
       - ./libs:/app/libs
       - /app/node_modules
-      - /app/apps/monolith/node_modules
+      - /app/apps/scheduler/node_modules

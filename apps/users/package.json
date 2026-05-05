@@ -1,0 +1,37 @@
+{
+	"name": "@app/users",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"build": "nest build",
+		"start": "node dist/main.js",
+		"start:dev": "nest start --watch",
+		"start:prod": "node dist/main.js",
+		"prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
+		"prisma:deploy": "prisma migrate deploy --schema=./prisma/schema.prisma"
+	},
+	"dependencies": {
+		"@app/common": "*",
+		"@app/database-core": "*",
+		"@app/rmq": "*",
+		"@app/zod-validation": "*",
+		"@prisma/client": "^6.19.3",
+		"prisma": "^6.19.3",
+		"@nestjs/common": "^11.0.0",
+		"@nestjs/config": "^4.0.0",
+		"@nestjs/core": "^11.0.0",
+		"@nestjs/platform-fastify": "^11.0.0",
+		"@nestjs/terminus": "^11.0.0",
+		"amqp-connection-manager": "^4.1.14",
+		"amqplib": "^0.10.5",
+		"dotenv": "^16.4.0",
+		"fastify": "^5.0.0",
+		"nestjs-pino": "^4.4.0",
+		"pino": "^9.5.0",
+		"pino-http": "^10.3.0",
+		"pino-pretty": "^13.0.0",
+		"reflect-metadata": "^0.2.2",
+		"rxjs": "^7.8.0",
+		"zod": "^4.0.0"
+	}
+}

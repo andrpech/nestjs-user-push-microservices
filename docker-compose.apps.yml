@@ -1,20 +1,95 @@
 services:
-  monolith:
+  # ---------------- Migrators (short-lived) ----------------
+
+  users-migrator:
     build:
       context: .
-      dockerfile: apps/monolith/Dockerfile
-    container_name: nupm-monolith
-    env_file: ./apps/monolith/.env
+      dockerfile: apps/users/Dockerfile
+      target: builder
+    container_name: nupm-users-migrator
+    env_file: ./apps/users/.env
+    command: sh -c "cd apps/users && npx prisma migrate deploy --schema=./prisma/schema.prisma"
+    networks:
+      - nupm-net
+
+  notifier-migrator:
+    build:
+      context: .
+      dockerfile: apps/notifier/Dockerfile
+      target: builder
+    container_name: nupm-notifier-migrator
+    env_file: ./apps/notifier/.env
+    command: sh -c "cd apps/notifier && npx prisma migrate deploy --schema=./prisma/schema.prisma"
+    networks:
+      - nupm-net
+
+  # ---------------- Long-lived apps ----------------
+
+  notifier:
+    build:
+      context: .
+      dockerfile: apps/notifier/Dockerfile
+    env_file: ./apps/notifier/.env
     environment:
       NODE_ENV: production
-    ports:
-      - '3000:3000'
+    deploy:
+      replicas: 2
+    healthcheck:
+      test: ['CMD', 'wget', '-qO', '/dev/null', 'http://localhost:3001/rhealth']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      notifier-migrator:
+        condition: service_completed_successfully
+    networks:
+      - nupm-net
+
+  users:
+    build:
+      context: .
+      dockerfile: apps/users/Dockerfile
+    env_file: ./apps/users/.env
+    environment:
+      NODE_ENV: production
+    deploy:
+      replicas: 2
     healthcheck:
       test: ['CMD', 'wget', '-qO', '/dev/null', 'http://localhost:3000/rhealth']
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 30s
+    depends_on:
+      users-migrator:
+        condition: service_completed_successfully
+      notifier:
+        condition: service_healthy
+    networks:
+      - nupm-net
+
+  # Singleton — DO NOT scale this service. Cron firings would multiply across
+  # replicas because there is no leader-election yet (planned for phase 13).
+  scheduler:
+    build:
+      context: .
+      dockerfile: apps/scheduler/Dockerfile
+    container_name: nupm-scheduler
+    env_file: ./apps/scheduler/.env
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: ['CMD', 'wget', '-qO', '/dev/null', 'http://localhost:3002/rhealth']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      users:
+        condition: service_healthy
+      notifier:
+        condition: service_healthy
     networks:
       - nupm-net
 

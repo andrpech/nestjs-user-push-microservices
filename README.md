@@ -52,7 +52,9 @@ make pc                       # typecheck + lint + format check
 ## Layout
 
 ```
-apps/monolith/                # single-process app for phases 1-6 (split in phase 7)
+apps/users/                   # POST /users + outbox publisher (phase 7+; replicas=2 in prod)
+apps/notifier/                # ingest + push delivery + retry/DLQ (phase 7+; replicas=2)
+apps/scheduler/               # cron tick producer (phase 7+; SINGLETON — do not scale)
 libs/{common,zod-validation,database-core,rmq}/  # shared libraries
 infra/postgres/init.sql       # creates `users` and `notifications` databases
 docs/INITIAL_PLAN.md          # technical design (markdown blueprint)
@@ -72,7 +74,7 @@ Tracked in `docs/plans/user-push-microservices.md` (13 phases). At a glance:
 - [x] Phase 4 — Notification ingest (notifier module + `UserCreatedConsumer`, idempotent INSERT)
 - [x] Phase 5 — Push delivery happy path (cron-driven claim, HTTP webhook with `Idempotency-Key`, history audit trail)
 - [x] Phase 6 — Robustness: send-retry with per-message expiration, inbox DLX→retry→DLQ ring, stuck-recovery redrive cap
-- [ ] Phase 7 — Split into 3 apps
+- [x] Phase 7 — Split into 3 apps (users, notifier, scheduler) + 2 migrators with full `depends_on` boot chain
 - [ ] Phase 8 — Metrics (Prometheus)
 - [ ] Phase 9 — Dashboards (Grafana)
 - [ ] Phase 10 — Distributed tracing (OpenTelemetry)
