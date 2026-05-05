@@ -1,4 +1,4 @@
-FROM node:22-slim AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -21,12 +21,10 @@ RUN cd apps/monolith && npx nest build
 
 # ---------------- Runtime ----------------
 
-FROM node:22-slim AS runtime
+FROM node:22-alpine AS runtime
 
 WORKDIR /app
 
-RUN apt-get update -y && apt-get install -y --no-install-recommends openssl curl \
-	&& rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/apps/monolith/package.json ./apps/monolith/
@@ -36,4 +34,4 @@ COPY --from=builder /app/node_modules ./node_modules
 
 WORKDIR /app/apps/monolith
 
-CMD ["node", "dist/apps/monolith/src/main.js"]
+CMD ["node", "dist/main.js"]

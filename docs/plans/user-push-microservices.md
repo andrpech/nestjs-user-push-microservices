@@ -50,7 +50,7 @@ Durable decisions that apply across all phases. Established during the design gr
 
 ---
 
-## Phase 1: Scaffolding + health
+## ✅ Phase 1: Scaffolding + health
 
 **User stories**: 8, 9, 10, 11, 12, 26, 28
 
@@ -60,14 +60,14 @@ The empty monorepo skeleton that everything else hangs from. npm workspaces with
 
 ### Acceptance criteria
 
-- [ ] `make infra-up` brings up postgres + rabbitmq, both healthy per their healthchecks
-- [ ] `make d` boots monolith via dev compose with bind-mount + `nest start --watch`
-- [ ] `GET /lhealth` returns 200 with `{status:'ok'}` synchronously
-- [ ] `GET /rhealth` returns 200 with empty checks array via terminus
-- [ ] `make pc` (lint + format check + typecheck) passes with no warnings
-- [ ] App refuses to boot when a required env var is missing (zod parse throws)
-- [ ] Pino emits structured JSON logs with `reqId` binding on HTTP requests
-- [ ] `make nuke` removes all containers and volumes cleanly
+- [x] `make infra-up` brings up postgres + rabbitmq, both healthy per their healthchecks
+- [x] `make d` boots monolith via dev compose with bind-mount + `nest start --watch`
+- [x] `GET /lhealth` returns 200 with `{status:'ok'}` synchronously
+- [x] `GET /rhealth` returns 200 with empty checks array via terminus
+- [x] `make pc` (lint + format check + typecheck) passes with no warnings
+- [x] App refuses to boot when a required env var is missing (zod parse throws)
+- [x] Pino emits structured JSON logs with `reqId` binding on HTTP requests
+- [x] `make nuke` removes all containers and volumes cleanly
 
 ---
 

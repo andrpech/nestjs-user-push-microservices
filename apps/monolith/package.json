@@ -4,10 +4,10 @@
 	"private": true,
 	"scripts": {
 		"build": "nest build",
-		"start": "node dist/apps/monolith/src/main.js",
+		"start": "node dist/main.js",
 		"start:dev": "nest start --watch",
 		"start:debug": "nest start --debug --watch",
-		"start:prod": "node dist/apps/monolith/src/main.js"
+		"start:prod": "node dist/main.js"
 	},
 	"dependencies": {
 		"@app/common": "*",

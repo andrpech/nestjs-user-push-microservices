@@ -10,7 +10,7 @@ services:
     ports:
       - '3000:3000'
     healthcheck:
-      test: ['CMD', 'curl', '-fsS', 'http://localhost:3000/rhealth']
+      test: ['CMD', 'wget', '-qO', '/dev/null', 'http://localhost:3000/rhealth']
       interval: 10s
       timeout: 3s
       retries: 5
