@@ -1,0 +1,21 @@
+{
+	"name": "@app/rmq",
+	"version": "0.1.0",
+	"private": true,
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc -p tsconfig.json"
+	},
+	"dependencies": {
+		"@app/common": "*",
+		"@nestjs/common": "^11.0.0",
+		"@nestjs/terminus": "^11.0.0",
+		"amqp-connection-manager": "^4.1.14",
+		"amqplib": "^0.10.5",
+		"zod": "^4.0.0"
+	},
+	"devDependencies": {
+		"@types/amqplib": "^0.10.6"
+	}
+}

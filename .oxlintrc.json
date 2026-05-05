@@ -1,0 +1,47 @@
+{
+	"$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn",
+		"perf": "warn",
+		"style": "warn"
+	},
+	"rules": {
+		"typescript/no-explicit-any": "warn",
+		"typescript/no-unsafe-assignment": "warn",
+		"typescript/no-unsafe-call": "warn",
+		"typescript/no-unsafe-member-access": "warn",
+		"typescript/no-unsafe-return": "warn",
+		"no-unused-vars": "warn",
+		"arrow-body-style": ["warn", "as-needed"],
+		"typescript/explicit-function-return-type": "warn",
+
+		"max-params": "off",
+		"no-magic-numbers": "off",
+		"sort-imports": "off",
+		"sort-keys": "off",
+		"new-cap": "off",
+		"no-ternary": "off",
+		"curly": "off",
+		"id-length": "off",
+		"no-null": "off",
+		"max-statements": "off",
+		"numeric-separators-style": "off",
+		"typescript/parameter-properties": "off",
+		"typescript/consistent-type-imports": "off",
+		"typescript/consistent-type-definitions": "off",
+		"typescript/no-extraneous-class": "off",
+		"unicorn/switch-case-braces": "off",
+		"capitalized-comments": "off"
+	},
+	"ignorePatterns": [
+		".github/**",
+		".vscode/**",
+		".husky/**",
+		"dist/**",
+		"**/dist/**",
+		"node_modules/**",
+		"**/node_modules/**",
+		"**/generated/**"
+	]
+}

@@ -1,0 +1,63 @@
+import { Logger, OnModuleInit } from '@nestjs/common'
+import type { ChannelWrapper } from 'amqp-connection-manager'
+import type { Channel, ConsumeMessage, Message } from 'amqplib'
+import { ZodType } from 'zod'
+
+import { getConsumerMetadata } from './decorators/consumer.decorator'
+import { RmqConnection } from './rmq-connection'
+import type { ConsumerCtx } from './types'
+
+export abstract class RmqConsumer<T> implements OnModuleInit {
+	protected readonly logger: Logger = new Logger(this.constructor.name)
+	protected abstract readonly schema: ZodType<T>
+	protected channel: ChannelWrapper | undefined
+
+	constructor(protected readonly conn: RmqConnection) {}
+
+	abstract handle(payload: T, ctx: ConsumerCtx): Promise<void>
+
+	async onModuleInit(): Promise<void> {
+		const meta = getConsumerMetadata(this)
+		if (!meta) {
+			throw new Error(`@Consumer({...}) decorator missing on ${this.constructor.name}`)
+		}
+
+		const { queue, prefetch = 10 } = meta
+		this.channel = this.conn.createChannel()
+
+		await this.channel.addSetup(async (ch: Channel) => {
+			await ch.prefetch(prefetch)
+			await ch.consume(queue, (msg) => {
+				if (!msg) return
+				void this.dispatch(ch, msg, queue)
+			})
+		})
+	}
+
+	private async dispatch(ch: Channel, msg: ConsumeMessage, queue: string): Promise<void> {
+		try {
+			const raw = JSON.parse(msg.content.toString())
+			const payload = this.schema.parse(raw)
+			const ctx: ConsumerCtx = {
+				messageId: msg.properties.messageId,
+				deathCount: this.deathCount(msg, queue),
+				headers: msg.properties.headers ?? {},
+				rawMessage: msg
+			}
+
+			await this.handle(payload, ctx)
+			ch.ack(msg)
+		} catch (error) {
+			this.logger.error({ error, queue }, 'consumer handler failed')
+			ch.nack(msg, false, false)
+		}
+	}
+
+	protected deathCount(msg: Message, queue: string): number {
+		const xDeath = msg.properties.headers?.['x-death'] as
+			| { count: number; queue: string }[]
+			| undefined
+
+		return xDeath?.find((d) => d.queue === queue)?.count ?? 0
+	}
+}

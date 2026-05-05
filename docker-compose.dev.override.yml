@@ -1,0 +1,17 @@
+services:
+  monolith:
+    build:
+      context: .
+      dockerfile: apps/monolith/Dockerfile
+      target: builder
+    command: sh -c "npm run build:libs && cd apps/monolith && npx nest start --watch"
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: 'true'
+    volumes:
+      - ./apps/monolith/src:/app/apps/monolith/src
+      - ./apps/monolith/tsconfig.json:/app/apps/monolith/tsconfig.json
+      - ./apps/monolith/nest-cli.json:/app/apps/monolith/nest-cli.json
+      - ./libs:/app/libs
+      - /app/node_modules
+      - /app/apps/monolith/node_modules

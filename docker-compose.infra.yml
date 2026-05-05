@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nupm-postgres
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: pwd
+      POSTGRES_DB: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U app -d postgres']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - nupm-net
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: nupm-rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - nupm-net
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+
+networks:
+  nupm-net:
+    name: nupm-net
+    driver: bridge

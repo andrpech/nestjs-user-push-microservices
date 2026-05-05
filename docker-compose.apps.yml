@@ -1,0 +1,23 @@
+services:
+  monolith:
+    build:
+      context: .
+      dockerfile: apps/monolith/Dockerfile
+    container_name: nupm-monolith
+    env_file: ./apps/monolith/.env
+    environment:
+      NODE_ENV: production
+    ports:
+      - '3000:3000'
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:3000/rhealth']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      - nupm-net
+
+networks:
+  nupm-net:
+    external: true

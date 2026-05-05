@@ -6,36 +6,36 @@
 
 ## Phases
 
-| Phase | Зміст |
-|---|---|
-| **1. Scaffolding** | Голий NestJS-проєкт з усім dev tooling, без бізнес-логіки. Health endpoints (`/lhealth` + `/rhealth`) через `@nestjs/terminus` з порожнім списком перевірок |
-| **2. Monolith** | Один NestJS app з 3-ма модулями (users / scheduler / notifier). Інфра + БД + RMQ + повний end-to-end flow з outbox pattern і DLX retry |
-| **3. Split** | Розщеплення monolith на 3 окремі deployable apps. Бізнес-код не змінюється — тільки топологія + relative-import rewrite для prisma generated clients |
-| **4. Monitoring & Infra** | Prometheus + Grafana + OpenTelemetry. End-to-end trace propagation через apps + RMQ + Postgres. Dashboards. Custom metrics (notification_failed_total, prisma latency, RMQ depth) |
-| **5. Admin & Recovery** | `notifier` app отримує HTTP layer. `/admin/notifications/:id`, `/admin/notifications?status=FAILED`, `/admin/notifications/:id/retry`, `/admin/dlq/inbox/republish`. No auth (assumed behind internal network) |
+| Phase                     | Зміст                                                                                                                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Scaffolding**        | Голий NestJS-проєкт з усім dev tooling, без бізнес-логіки. Health endpoints (`/lhealth` + `/rhealth`) через `@nestjs/terminus` з порожнім списком перевірок                                                                         |
+| **2. Monolith**           | Один NestJS app з 3-ма модулями (users / scheduler / notifier). Інфра + БД + RMQ + повний end-to-end flow з outbox pattern і DLX retry                                                                                              |
+| **3. Split**              | Розщеплення monolith на 3 окремі deployable apps. Бізнес-код не змінюється — тільки топологія + relative-import rewrite для prisma generated clients                                                                                |
+| **4. Monitoring & Infra** | Prometheus + Grafana + OpenTelemetry. End-to-end trace propagation через apps + RMQ + Postgres. Dashboards. Custom metrics (notification_failed_total, prisma latency, RMQ depth)                                                   |
+| **5. Admin & Recovery**   | `notifier` app отримує HTTP layer. `/admin/notifications/:id`, `/admin/notifications?status=FAILED`, `/admin/notifications/:id/retry`, `/admin/dlq/inbox/republish`. No auth (assumed behind internal network)                      |
 | **6. Optional remainder** | Read replicas (postgres-write + postgres-read), повний graceful shutdown (per-consumer drain), K8s manifests, scheduler leader-election (`pg_advisory_lock`), alternate-exchange для unrouted cron messages, live/ready probe split |
 
 ---
 
 ## Stack
 
-| Компонент | Вибір | Альтернатива (відкинута) |
-|---|---|---|
-| Runtime | Node 22 LTS | — |
-| Framework | NestJS 11 | — |
-| HTTP adapter | Fastify | Express (повільніший, default Nest) |
-| ORM | Prisma 7 | TypeORM (multi-DB складніше), Drizzle (менш зрілий) |
-| DB | Postgres 16 | MySQL (Prisma multi-DB workflow гірший) |
-| Broker | RabbitMQ 3 | Redis/BullMQ (не подобається змішування), NATS |
-| RMQ lib | `amqplib` + `amqp-connection-manager` | `@nestjs/microservices` (відкинуто), `@golevelup/nestjs-rabbitmq` (відкинуто, third-party) |
-| Validation | `zod` + `nestjs-zod`-style interceptor | `class-validator` (стандарт Nest, але ми вибираємо zod скрізь) |
-| Logger | `nestjs-pino` | стандартний Nest Logger |
-| Config | `@nestjs/config` `registerAs` + zod `ConfigSchema` parse-on-boot, typed DI через `ConfigurationInjectKey` (markus pattern) | raw `process.env` |
-| Health | `@nestjs/terminus`, `/lhealth` + `/rhealth` (markus pattern) | custom stub |
-| Cron | `@nestjs/schedule` через `SchedulerRegistry` dynamic registration | `@Cron(...)` decorator (decorator evaluates before config loads) |
-| ID generation | `ulid` package, app-level | UUID v4, Postgres extension |
-| Workspaces | npm workspaces | NestJS workspaces (відкинуто, бо single image), nx/turbo (overkill) |
-| Tests | none (skipped — E2E smoke test is QA path) | vitest, jest |
+| Компонент     | Вибір                                                                                                                      | Альтернатива (відкинута)                                                                   |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Runtime       | Node 22 LTS                                                                                                                | —                                                                                          |
+| Framework     | NestJS 11                                                                                                                  | —                                                                                          |
+| HTTP adapter  | Fastify                                                                                                                    | Express (повільніший, default Nest)                                                        |
+| ORM           | Prisma 7                                                                                                                   | TypeORM (multi-DB складніше), Drizzle (менш зрілий)                                        |
+| DB            | Postgres 16                                                                                                                | MySQL (Prisma multi-DB workflow гірший)                                                    |
+| Broker        | RabbitMQ 3                                                                                                                 | Redis/BullMQ (не подобається змішування), NATS                                             |
+| RMQ lib       | `amqplib` + `amqp-connection-manager`                                                                                      | `@nestjs/microservices` (відкинуто), `@golevelup/nestjs-rabbitmq` (відкинуто, third-party) |
+| Validation    | `zod` + `nestjs-zod`-style interceptor                                                                                     | `class-validator` (стандарт Nest, але ми вибираємо zod скрізь)                             |
+| Logger        | `nestjs-pino`                                                                                                              | стандартний Nest Logger                                                                    |
+| Config        | `@nestjs/config` `registerAs` + zod `ConfigSchema` parse-on-boot, typed DI через `ConfigurationInjectKey` (markus pattern) | raw `process.env`                                                                          |
+| Health        | `@nestjs/terminus`, `/lhealth` + `/rhealth` (markus pattern)                                                               | custom stub                                                                                |
+| Cron          | `@nestjs/schedule` через `SchedulerRegistry` dynamic registration                                                          | `@Cron(...)` decorator (decorator evaluates before config loads)                           |
+| ID generation | `ulid` package, app-level                                                                                                  | UUID v4, Postgres extension                                                                |
+| Workspaces    | npm workspaces                                                                                                             | NestJS workspaces (відкинуто, бо single image), nx/turbo (overkill)                        |
+| Tests         | none (skipped — E2E smoke test is QA path)                                                                                 | vitest, jest                                                                               |
 
 ---
 
@@ -217,6 +217,7 @@ apps/
 ## Module Boundaries
 
 ### `users` module
+
 - **Owns:** `User` table в `users` DB
 - **HTTP:** `POST /users` (тіло: `{ name: string }`, 1–64 chars, `.strict()`)
 - **Response 201:** `{ id, name, createdAt }`
@@ -231,6 +232,7 @@ apps/
 - **Не знає** про notifier, scheduler, notifications DB
 
 ### `scheduler` module
+
 - **Owns:** нічого (без БД, без `@prisma/client`)
 - **App shape:** full Nest + Fastify (consistent з users/notifier; має `/health` для compose `depends_on`)
 - **Cron registration:** `SchedulerService.onModuleInit()` реєструє два cron-job через `SchedulerRegistry` (НЕ `@Cron(...)` decorator):
@@ -239,6 +241,7 @@ apps/
 - **Не знає** про users, notifier, БД
 
 ### `notifier` module
+
 - **Owns:** `Notification` table в `notifications` DB
 - **Consumers:**
   - `user.created` → `CreateNotificationCommand` (idempotent INSERT, `userId @unique` дедуплікує redelivery; зберігає `name` з event payload)
@@ -276,6 +279,7 @@ postgres:16 container
 ```
 
 **Bootstrap послідовність:**
+
 1. `make infra-up` → стартує postgres
 2. `init.sql` (auto, в `/docker-entrypoint-initdb.d/`) → `CREATE DATABASE users; CREATE DATABASE notifications;`
 3. App entrypoint → `npm run prisma:deploy` (per app's own schemas) → `node dist/main.js`
@@ -363,13 +367,13 @@ Append-only список об'єктів-подій:
 
 ```json
 [
-  { "at": "...", "type": "CREATED" },
-  { "at": "...", "type": "CLAIMED_BY_TICK" },
-  { "at": "...", "type": "PUSH_ATTEMPT", "attempt": 1, "latencyMs": 312, "error": "ECONNRESET" },
-  { "at": "...", "type": "REDRIVEN_FROM_STUCK", "previousStartedAt": "..." },
-  { "at": "...", "type": "PUSH_ATTEMPT", "attempt": 2, "latencyMs": 89, "responseStatus": 200 },
-  { "at": "...", "type": "PUSH_SENT" },
-  { "at": "...", "type": "MANUAL_RETRY" }
+	{ "at": "...", "type": "CREATED" },
+	{ "at": "...", "type": "CLAIMED_BY_TICK" },
+	{ "at": "...", "type": "PUSH_ATTEMPT", "attempt": 1, "latencyMs": 312, "error": "ECONNRESET" },
+	{ "at": "...", "type": "REDRIVEN_FROM_STUCK", "previousStartedAt": "..." },
+	{ "at": "...", "type": "PUSH_ATTEMPT", "attempt": 2, "latencyMs": 89, "responseStatus": 200 },
+	{ "at": "...", "type": "PUSH_SENT" },
+	{ "at": "...", "type": "MANUAL_RETRY" }
 ]
 ```
 
@@ -417,11 +421,11 @@ Exchange: notifications.dlx        type=topic
 
 Кожен app оголошує **тільки те, що він використовує**, через `channel.addSetup(...)`. Asserts є idempotent — multiple apps можуть assert той самий exchange (args повинні співпадати — це code-review concern, не runtime issue).
 
-| App | Declares |
-|---|---|
-| `users` | `users.events` exchange (для publish), `system.cron` exchange + `users.outbox-cron` queue + binding (для consume) |
-| `scheduler` | `system.cron` exchange (для publish обох routing keys) |
-| `notifier` | `users.events` exchange (consume), `notifier.user-created` queue + binding + DLX args, `notifications.retry.events` exchange + retry queue + binding (per-message TTL), `notifications.dlx` exchange + DLQ queue + binding, `system.cron` exchange + `notifier.cron` queue + binding, `notifications.work` exchange + `notifier.push-send` queue + binding + DLX args, `notifications.retry.work` exchange + retry queue + binding |
+| App         | Declares                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`     | `users.events` exchange (для publish), `system.cron` exchange + `users.outbox-cron` queue + binding (для consume)                                                                                                                                                                                                                                                                                                                  |
+| `scheduler` | `system.cron` exchange (для publish обох routing keys)                                                                                                                                                                                                                                                                                                                                                                             |
+| `notifier`  | `users.events` exchange (consume), `notifier.user-created` queue + binding + DLX args, `notifications.retry.events` exchange + retry queue + binding (per-message TTL), `notifications.dlx` exchange + DLQ queue + binding, `system.cron` exchange + `notifier.cron` queue + binding, `notifications.work` exchange + `notifier.push-send` queue + binding + DLX args, `notifications.retry.work` exchange + retry queue + binding |
 
 ### Boot order via `depends_on`
 
@@ -541,12 +545,12 @@ Producer base встановлює: `persistent: true`, `messageId: ulid()`, `ma
 ```ts
 @Consumer({ queue: 'notifier.push-send', prefetch: 10 })
 export class PushSendConsumer extends RmqConsumer<{ notificationId: string }> {
-  protected readonly schema = z.object({ notificationId: z.string() });
+	protected readonly schema = z.object({ notificationId: z.string() })
 
-  async handle(payload, ctx: ConsumerCtx) {
-    // ctx: { messageId, deathCount, headers, rawMessage }
-    // throw → nack-no-requeue → routes via DLX
-  }
+	async handle(payload, ctx: ConsumerCtx) {
+		// ctx: { messageId, deathCount, headers, rawMessage }
+		// throw → nack-no-requeue → routes via DLX
+	}
 }
 ```
 
@@ -565,12 +569,12 @@ Default error path: zod parse fail OR `handle` throws → `channel.nack(msg, fal
 
 ## Replicas
 
-| App | Phase 2 | Phase 3 | Constraint |
-|---|---|---|---|
-| `monolith` | 1 | — | scheduler embedded → cron singleton |
-| `users` | — | 2 | Stateless HTTP; outbox cron coordinated via `publishingStartedAt` claim |
-| `notifier` | — | 2 | Stateless consumers; coordinated via `processing_started_at` claim |
-| `scheduler` | — | 1 | Cron singleton (avoids duplicate ticks). Phase 6: `pg_advisory_lock` для HA |
+| App         | Phase 2 | Phase 3 | Constraint                                                                  |
+| ----------- | ------- | ------- | --------------------------------------------------------------------------- |
+| `monolith`  | 1       | —       | scheduler embedded → cron singleton                                         |
+| `users`     | —       | 2       | Stateless HTTP; outbox cron coordinated via `publishingStartedAt` claim     |
+| `notifier`  | —       | 2       | Stateless consumers; coordinated via `processing_started_at` claim          |
+| `scheduler` | —       | 1       | Cron singleton (avoids duplicate ticks). Phase 6: `pg_advisory_lock` для HA |
 
 ---
 
@@ -619,8 +623,13 @@ Each app composes its own `ConfigSchema` in `apps/<app>/src/config/validation-sc
 
 ```ts
 // apps/scheduler/src/config/validation-schema.ts
-import { AppSchema, RmqSchema, CronSchema } from '@app/config'
-export const SchedulerConfigSchema = z.strictObject({ app: AppSchema, rmq: RmqSchema, cron: CronSchema })
+import { AppSchema, CronSchema, RmqSchema } from '@app/config'
+
+export const SchedulerConfigSchema = z.strictObject({
+	app: AppSchema,
+	rmq: RmqSchema,
+	cron: CronSchema
+})
 ```
 
 `apps/<app>/src/config/configuration.ts` mirrors markus:
@@ -647,20 +656,24 @@ Inject in services: `@Inject(ConfigurationInjectKey) private readonly config: Co
 ### `POST /users`
 
 Request:
+
 ```json
 { "name": "andrii" }
 ```
 
 Validation (zod, strict):
+
 - `name`: required, string, 1..64 chars, trimmed
 - No other fields
 
 Response 201:
+
 ```json
 { "id": "01H...", "name": "andrii", "createdAt": "2026-05-04T10:00:00Z" }
 ```
 
 Errors:
+
 - 400 — zod validation failure
 - 5xx — DB unavailable
 
@@ -669,11 +682,13 @@ POST is **not** idempotent: same `name` twice → two distinct users.
 ### Webhook POST (push.send)
 
 Request to `WEBHOOK_URL`:
+
 ```json
 { "userId": "01H...", "name": "andrii", "notificationId": "01H..." }
 ```
 
 Headers:
+
 - `Content-Type: application/json`
 - `Idempotency-Key: <notificationId>`
 - `User-Agent: nestjs-user-push-microservices/<version>`
@@ -682,12 +697,12 @@ Timeout: `AbortSignal.timeout(PUSH_HTTP_TIMEOUT_MS)`.
 
 ### Phase 5 admin endpoints (notifier app)
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/admin/notifications/:id` | Full row including `history` JSONB |
-| GET | `/admin/notifications?status=FAILED&limit=100&cursor=<ulid>` | Cursor-paginated list (ULID is sortable) |
-| POST | `/admin/notifications/:id/retry` | If `status=FAILED`: reset → `status=PENDING, attempts=0, processing_started_at=NULL, last_error=NULL`, append `MANUAL_RETRY`. Returns 200 with new row. If status≠FAILED → 409 Conflict |
-| POST | `/admin/dlq/inbox/republish` | Drain `notifier.user-created.dlq`, republish to `users.events`. Body: optional `{ ids: ["..."] }` for selective republish |
+| Method | Path                                                         | Purpose                                                                                                                                                                                 |
+| ------ | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/admin/notifications/:id`                                   | Full row including `history` JSONB                                                                                                                                                      |
+| GET    | `/admin/notifications?status=FAILED&limit=100&cursor=<ulid>` | Cursor-paginated list (ULID is sortable)                                                                                                                                                |
+| POST   | `/admin/notifications/:id/retry`                             | If `status=FAILED`: reset → `status=PENDING, attempts=0, processing_started_at=NULL, last_error=NULL`, append `MANUAL_RETRY`. Returns 200 with new row. If status≠FAILED → 409 Conflict |
+| POST   | `/admin/dlq/inbox/republish`                                 | Drain `notifier.user-created.dlq`, republish to `users.events`. Body: optional `{ ids: ["..."] }` for selective republish                                                               |
 
 No auth — assumed behind internal network. Add `X-Admin-Token` env-checked header in Phase 6 if needed.
 
@@ -720,26 +735,27 @@ No auth — assumed behind internal network. Add `X-Admin-Token` env-checked hea
 
 ## Phase 1 Commit Roadmap (Scaffolding)
 
-| # | Commit | Деталі |
-|---|---|---|
-| 1 | `chore: init npm workspaces and root package.json` | root `package.json` з `workspaces: ["apps/*", "libs/*"]`, `.gitignore`, `.nvmrc` (node 22 LTS) |
-| 2 | `chore: add prettier and oxlint configs from markus` | `.oxlintrc.json`, `.prettierrc`, devDeps |
-| 3 | `chore: add husky with pre-commit running make pc` | `.husky/pre-commit` → `make pc`; postinstall → `husky` |
-| 4 | `chore: add 9 git-aware bash scripts` | `scripts/lint-*.sh`, `scripts/format-*.sh` (копія з markus) |
-| 5 | `chore: add Makefile with infra/dev/code-quality targets` | `infra-up`, `infra-down`, `infra-logs`, `infra-clean`, `up-all`, `down-all`, `nuke`, `d` (apps-only with watch), `lint`, `lint-fix`, `format`, `format-check`, `pc`, `lint-staged`, `format-staged-write`, `lint-branch`, `format-branch`, `db-{users,notifs}-{create,migrate}` |
-| 6 | `chore: scaffold libs/common with Command and Query interfaces` | пустий пакет `@app/common` з `Command<I,O>`, `Query<I,O>`, ulid re-export, `LoggerModule` (nestjs-pino bindings) |
-| 7 | `chore: scaffold libs/config with zod schema building blocks` | `@app/config`: `schemas/{app,database,rmq,notification,cron,webhook}.schema.ts`; index re-exports building blocks |
-| 8 | `chore: scaffold libs/zod-validation` | `@app/zod-validation`: ZodSchema decorator, BaseZodValidationInterceptor (адаптовано з martech-utils) |
-| 9 | `chore: scaffold libs/database-core` | `@app/database-core`: `createExtendedPrismaClient` (pino query logging), `prisma-clients-base.ts` (class+interface merge helpers), `createDatabaseModule` factory |
-| 10 | `chore: scaffold libs/rmq with consumer/producer base classes` | `@app/rmq`: `RmqConnection` wrapper з `OnModuleDestroy`, `RmqConsumer<T>` (channel-per-consumer, zod, deathCount helper), `RmqProducer<T>` (confirm channel, ulid messageId, mandatory+return listener), decorators, `RmqHealthIndicator` |
-| 11 | `chore: scaffold apps/monolith with NestJS 11 + Fastify booting` | мінімальний NestJS app, `import 'dotenv/config'`, `app.enableShutdownHooks()`, `MonolithConfigSchema` composes all building blocks, `HealthModule` з `/lhealth` (sync ok) + `/rhealth` (terminus з порожнім списком), `apps/monolith/.env.example` |
-| 12 | `chore: add docker-compose.infra.yml and infra/postgres/init.sql` | postgres + rabbitmq services, init.sql створює databases, healthchecks |
-| 13 | `chore: add docker-compose.apps.yml shell with monolith service` | apps compose з посиланням на `apps/monolith/Dockerfile`, `depends_on` chain |
-| 14 | `chore: add docker-compose.dev.override.yml with bind-mount and watch` | bind-mount source, anonymous node_modules volume, `target: builder`, `command: npm run start:dev`, `CHOKIDAR_USEPOLLING=true` |
-| 15 | `chore: add multistage Dockerfile for monolith` | builder + runtime stage; copies `node_modules/.prisma` + `node_modules/@prisma/client` from builder; `prisma` in production deps |
-| 16 | `chore: README with dev workflow and bootstrap steps` | `make infra-up`, `make d`, `make up-all`, `make nuke`, etc. |
+| #   | Commit                                                                 | Деталі                                                                                                                                                                                                                                                                          |
+| --- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `chore: init npm workspaces and root package.json`                     | root `package.json` з `workspaces: ["apps/*", "libs/*"]`, `.gitignore`, `.nvmrc` (node 22 LTS)                                                                                                                                                                                  |
+| 2   | `chore: add prettier and oxlint configs from markus`                   | `.oxlintrc.json`, `.prettierrc`, devDeps                                                                                                                                                                                                                                        |
+| 3   | `chore: add husky with pre-commit running make pc`                     | `.husky/pre-commit` → `make pc`; postinstall → `husky`                                                                                                                                                                                                                          |
+| 4   | `chore: add 9 git-aware bash scripts`                                  | `scripts/lint-*.sh`, `scripts/format-*.sh` (копія з markus)                                                                                                                                                                                                                     |
+| 5   | `chore: add Makefile with infra/dev/code-quality targets`              | `infra-up`, `infra-down`, `infra-logs`, `infra-clean`, `up-all`, `down-all`, `nuke`, `d` (apps-only with watch), `lint`, `lint-fix`, `format`, `format-check`, `pc`, `lint-staged`, `format-staged-write`, `lint-branch`, `format-branch`, `db-{users,notifs}-{create,migrate}` |
+| 6   | `chore: scaffold libs/common with Command and Query interfaces`        | пустий пакет `@app/common` з `Command<I,O>`, `Query<I,O>`, ulid re-export, `LoggerModule` (nestjs-pino bindings)                                                                                                                                                                |
+| 7   | `chore: scaffold libs/config with zod schema building blocks`          | `@app/config`: `schemas/{app,database,rmq,notification,cron,webhook}.schema.ts`; index re-exports building blocks                                                                                                                                                               |
+| 8   | `chore: scaffold libs/zod-validation`                                  | `@app/zod-validation`: ZodSchema decorator, BaseZodValidationInterceptor (адаптовано з martech-utils)                                                                                                                                                                           |
+| 9   | `chore: scaffold libs/database-core`                                   | `@app/database-core`: `createExtendedPrismaClient` (pino query logging), `prisma-clients-base.ts` (class+interface merge helpers), `createDatabaseModule` factory                                                                                                               |
+| 10  | `chore: scaffold libs/rmq with consumer/producer base classes`         | `@app/rmq`: `RmqConnection` wrapper з `OnModuleDestroy`, `RmqConsumer<T>` (channel-per-consumer, zod, deathCount helper), `RmqProducer<T>` (confirm channel, ulid messageId, mandatory+return listener), decorators, `RmqHealthIndicator`                                       |
+| 11  | `chore: scaffold apps/monolith with NestJS 11 + Fastify booting`       | мінімальний NestJS app, `import 'dotenv/config'`, `app.enableShutdownHooks()`, `MonolithConfigSchema` composes all building blocks, `HealthModule` з `/lhealth` (sync ok) + `/rhealth` (terminus з порожнім списком), `apps/monolith/.env.example`                              |
+| 12  | `chore: add docker-compose.infra.yml and infra/postgres/init.sql`      | postgres + rabbitmq services, init.sql створює databases, healthchecks                                                                                                                                                                                                          |
+| 13  | `chore: add docker-compose.apps.yml shell with monolith service`       | apps compose з посиланням на `apps/monolith/Dockerfile`, `depends_on` chain                                                                                                                                                                                                     |
+| 14  | `chore: add docker-compose.dev.override.yml with bind-mount and watch` | bind-mount source, anonymous node_modules volume, `target: builder`, `command: npm run start:dev`, `CHOKIDAR_USEPOLLING=true`                                                                                                                                                   |
+| 15  | `chore: add multistage Dockerfile for monolith`                        | builder + runtime stage; copies `node_modules/.prisma` + `node_modules/@prisma/client` from builder; `prisma` in production deps                                                                                                                                                |
+| 16  | `chore: README with dev workflow and bootstrap steps`                  | `make infra-up`, `make d`, `make up-all`, `make nuke`, etc.                                                                                                                                                                                                                     |
 
 **Definition of Done для Phase 1:**
+
 - `make infra-up` → postgres + rabbitmq healthy
 - `make d` → app boots, `GET /lhealth` returns 200 sync `{status:'ok'}`, `GET /rhealth` returns 200 з порожнім checks array
 - `make pc` → проходить без warning'ів
@@ -766,6 +782,7 @@ No auth — assumed behind internal network. Add `X-Admin-Token` env-checked hea
 13. End-to-end smoke test: POST /users → wait ~45s → check webhook.site
 
 **Definition of Done для Phase 2:**
+
 - `make up-all` піднімає infra + monolith (1 replica)
 - `curl -X POST http://localhost:3000/users -H 'Content-Type: application/json' -d '{"name":"andrii"}'` → 201 з `{id, name, createdAt}`
 - Через ~45 секунд webhook.site показує POST з body `{userId, name, notificationId}` і header `Idempotency-Key: <notificationId>`
@@ -796,6 +813,7 @@ No auth — assumed behind internal network. Add `X-Admin-Token` env-checked hea
 **Бізнес-код не змінюється** — тільки топологія + relative-import rewrite per step 8.
 
 **Definition of Done для Phase 3:**
+
 - `make up-all` піднімає 3 окремі app контейнери (users×2, notifier×2, scheduler×1) + 2 migrators
 - Той самий end-to-end smoke test проходить
 - Кожен сервіс має власний log stream і власну БД view
@@ -830,6 +848,7 @@ No auth — assumed behind internal network. Add `X-Admin-Token` env-checked hea
 6. README admin section з прикладами curl
 
 **Definition of Done для Phase 5:**
+
 - Force a FAILED row → curl `GET /admin/notifications?status=FAILED` показує його → curl `POST /admin/notifications/:id/retry` → row transitions PENDING → PROCESSING → SENT
 - Force inbox DLQ messages (5 failed user.created consumes) → curl `POST /admin/dlq/inbox/republish` → DLQ drains, messages reprocessed
 
@@ -837,14 +856,14 @@ No auth — assumed behind internal network. Add `X-Admin-Token` env-checked hea
 
 ## Phase 6 (Optional remainder)
 
-| Item | Зміст |
-|---|---|
-| Read replicas | `postgres-write` + `postgres-read`, streaming replication, `*_READ_DB_URL` → standby; code shape вже готовий (Read/Write tokens існують з Phase 2) |
-| Full graceful shutdown | per-consumer `channel.cancel(consumerTag)` + drain in-flight, prisma `$disconnect`, fastify in-flight draining, `SchedulerRegistry` pause |
-| K8s manifests | Deployment, Service, ConfigMap, Secret per app для прод-ready deploy |
-| Scheduler HA | `pg_advisory_lock` leader election (allows scheduler N>1) |
-| Alternate-exchange | `system.cron` exchange отримує `alternate-exchange` arg → unrouted cron messages → `unrouted.alt` queue для inspection |
-| Live/ready probe split | Keep `/lhealth` + `/rhealth` (already split since Phase 1); add k8s probe configs |
+| Item                   | Зміст                                                                                                                                              |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Read replicas          | `postgres-write` + `postgres-read`, streaming replication, `*_READ_DB_URL` → standby; code shape вже готовий (Read/Write tokens існують з Phase 2) |
+| Full graceful shutdown | per-consumer `channel.cancel(consumerTag)` + drain in-flight, prisma `$disconnect`, fastify in-flight draining, `SchedulerRegistry` pause          |
+| K8s manifests          | Deployment, Service, ConfigMap, Secret per app для прод-ready deploy                                                                               |
+| Scheduler HA           | `pg_advisory_lock` leader election (allows scheduler N>1)                                                                                          |
+| Alternate-exchange     | `system.cron` exchange отримує `alternate-exchange` arg → unrouted cron messages → `unrouted.alt` queue для inspection                             |
+| Live/ready probe split | Keep `/lhealth` + `/rhealth` (already split since Phase 1); add k8s probe configs                                                                  |
 
 ---
 

@@ -1,0 +1,42 @@
+{
+	"compilerOptions": {
+		"module": "CommonJS",
+		"esModuleInterop": true,
+		"declaration": true,
+		"removeComments": true,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"allowSyntheticDefaultImports": true,
+		"target": "ES2024",
+		"lib": ["ES2024"],
+		"sourceMap": true,
+		"outDir": "./dist",
+		"baseUrl": "./",
+		"ignoreDeprecations": "5.0",
+		"incremental": true,
+		"skipLibCheck": true,
+		"strictNullChecks": true,
+		"noImplicitAny": false,
+		"strictBindCallApply": false,
+		"forceConsistentCasingInFileNames": false,
+		"noFallthroughCasesInSwitch": false,
+		"noImplicitThis": true,
+		"alwaysStrict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noImplicitReturns": true,
+		"resolveJsonModule": true,
+		"paths": {
+			"@app/common": ["libs/common/src"],
+			"@app/common/*": ["libs/common/src/*"],
+			"@app/zod-validation": ["libs/zod-validation/src"],
+			"@app/zod-validation/*": ["libs/zod-validation/src/*"],
+			"@app/database-core": ["libs/database-core/src"],
+			"@app/database-core/*": ["libs/database-core/src/*"],
+			"@app/rmq": ["libs/rmq/src"],
+			"@app/rmq/*": ["libs/rmq/src/*"]
+		}
+	},
+	"include": ["apps/**/*.ts", "libs/**/*.ts"],
+	"exclude": ["node_modules", "dist", "**/dist/**", "**/generated/**"]
+}

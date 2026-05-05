@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+dist
+**/dist
+build
+coverage
+**/generated
+*.log
+.husky/_
+package-lock.json

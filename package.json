@@ -1,0 +1,40 @@
+{
+	"name": "nestjs-user-push-microservices",
+	"version": "0.1.0",
+	"private": true,
+	"description": "User → push notification microservices on NestJS + RabbitMQ + Postgres",
+	"workspaces": [
+		"apps/*",
+		"libs/*"
+	],
+	"scripts": {
+		"build:libs": "npm run build --workspaces --if-present --include-workspace-root=false",
+		"build": "npm run build:libs",
+		"format": "prettier --cache --write .",
+		"format:check": "prettier --cache --check .",
+		"format:staged": "sh scripts/format-staged.sh",
+		"format:staged:write": "sh scripts/format-staged-write.sh",
+		"lint": "oxlint",
+		"lint:fix": "oxlint --fix",
+		"lint:staged": "sh scripts/lint-staged.sh",
+		"lint:changed": "sh scripts/lint-changed.sh",
+		"lint:fix:staged": "sh scripts/lint-fix-staged.sh",
+		"lint:fix:changed": "sh scripts/lint-fix-changed.sh",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"prepare": "husky"
+	},
+	"devDependencies": {
+		"@ianvs/prettier-plugin-sort-imports": "^4.4.0",
+		"@nestjs/cli": "^11.0.0",
+		"@nestjs/schematics": "^11.0.0",
+		"@types/node": "^22.10.0",
+		"husky": "^9.1.7",
+		"oxlint": "^1.0.0",
+		"prettier": "^3.4.0",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.7.0"
+	},
+	"engines": {
+		"node": ">=22"
+	}
+}
