@@ -134,7 +134,7 @@ Notifier module is added. The `notifications` Prisma schema and first migration 
 
 ---
 
-## Phase 5: Push delivery happy path
+## ✅ Phase 5: Push delivery happy path
 
 **User stories**: 4, 5, 6, 7, 27
 
@@ -144,15 +144,15 @@ The full delivery loop. `NotifierCronConsumer` (`prefetch: 1`) consumes `cron.no
 
 ### Acceptance criteria
 
-- [ ] `POST /users` followed by waiting `NOTIFICATION_DELAY_MS` (set to 30s in dev `.env`) results in a POST to `WEBHOOK_URL` within ~45s
-- [ ] Webhook receives JSON body `{userId, name, notificationId}` matching the user's data
-- [ ] Webhook receives `Idempotency-Key: <notificationId>` header (verifiable via webhook.site request inspector)
-- [ ] Webhook receives `User-Agent: nestjs-user-push-microservices/<version>` header
-- [ ] After successful delivery, the `Notification` row has `status='SENT'`, non-null `sentAt`, `history` array contains entries for `CREATED`, `CLAIMED_BY_TICK`, `PUSH_ATTEMPT` with status 200, `PUSH_SENT`
-- [ ] Force a redelivery of the same `push.send` message (e.g., via RMQ shovel): consumer reads row, sees `status='SENT'`, acks and returns. Webhook does NOT receive a second POST
-- [ ] HTTP timeout is honored: point `WEBHOOK_URL` at a host that hangs; consumer aborts after `PUSH_HTTP_TIMEOUT_MS` and (for now) just logs the error
-- [ ] Cron tick prefetch=1 verified: with two cron messages backed up, only one consumer instance processes at a time
-- [ ] End-to-end demo passes: `make up-all` → curl POST → wait → check webhook.site
+- [x] `POST /users` followed by waiting `NOTIFICATION_DELAY_MS` (set to 30s in dev `.env`) results in a POST to `WEBHOOK_URL` within ~45s _(verified with `NOTIFICATION_DELAY_MS=10000`, fired at delay+~50ms)_
+- [x] Webhook receives JSON body `{userId, name, notificationId}` matching the user's data
+- [x] Webhook receives `Idempotency-Key: <notificationId>` header (verifiable via webhook.site request inspector)
+- [x] Webhook receives `User-Agent: nestjs-user-push-microservices/<version>` header
+- [x] After successful delivery, the `Notification` row has `status='SENT'`, non-null `sentAt`, `history` array contains entries for `CREATED`, `CLAIMED_BY_TICK`, `PUSH_ATTEMPT` with status 200, `PUSH_SENT`
+- [x] Force a redelivery of the same `push.send` message (e.g., via RMQ shovel): consumer reads row, sees `status='SENT'`, acks and returns. Webhook does NOT receive a second POST
+- [ ] HTTP timeout is honored: point `WEBHOOK_URL` at a host that hangs; consumer aborts after `PUSH_HTTP_TIMEOUT_MS` and (for now) just logs the error _(code uses `AbortSignal.timeout(PUSH_HTTP_TIMEOUT_MS)`; not exercised live against a hanging host)_
+- [ ] Cron tick prefetch=1 verified: with two cron messages backed up, only one consumer instance processes at a time _(prefetch=1 set on `NotifierCronConsumer`; not exercised with two queued ticks)_
+- [x] End-to-end demo passes: `make up-all` → curl POST → wait → check webhook.site _(verified against a host-side catcher in lieu of webhook.site)_
 
 ---
 

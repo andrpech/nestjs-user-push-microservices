@@ -26,6 +26,15 @@ export const configuration = registerAs('app', () => {
 		outbox: {
 			batchSize: Number.parseInt(process.env.OUTBOX_BATCH_SIZE ?? '100', 10),
 			stuckThresholdMs: Number.parseInt(process.env.OUTBOX_STUCK_THRESHOLD_MS ?? '300000', 10)
+		},
+		notifier: {
+			batchSize: Number.parseInt(process.env.NOTIFIER_BATCH_SIZE ?? '100', 10),
+			notificationDelayMs: Number.parseInt(process.env.NOTIFICATION_DELAY_MS ?? '30000', 10),
+			recoveryThresholdMs: Number.parseInt(process.env.RECOVERY_THRESHOLD_MS ?? '300000', 10)
+		},
+		push: {
+			webhookUrl: process.env.WEBHOOK_URL ?? '',
+			httpTimeoutMs: Number.parseInt(process.env.PUSH_HTTP_TIMEOUT_MS ?? '5000', 10)
 		}
 	}
 

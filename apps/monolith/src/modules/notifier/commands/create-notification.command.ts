@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { Command, ulid } from '@app/common'
 import { Prisma } from '../../../../prisma/notifications/generated'
 import { NotificationsWritePrismaClient } from '../../../database/notifications.clients'
+import { historyEntry } from '../history'
 
 export interface CreateNotificationInput {
 	userId: string
@@ -27,7 +28,7 @@ export class CreateNotificationCommand implements Command<
 	async execute({ userId, name }: CreateNotificationInput): Promise<CreateNotificationOutput> {
 		try {
 			const row = await this.write.notification.create({
-				data: { id: ulid(), userId, name }
+				data: { id: ulid(), userId, name, history: [historyEntry('CREATED')] }
 			})
 			return { notificationId: row.id, deduped: false }
 		} catch (error) {

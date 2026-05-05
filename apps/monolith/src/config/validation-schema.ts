@@ -23,6 +23,15 @@ export const MonolithConfigSchema = z.strictObject({
 	outbox: z.strictObject({
 		batchSize: z.number().int().min(1).max(10_000),
 		stuckThresholdMs: z.number().int().min(1_000)
+	}),
+	notifier: z.strictObject({
+		batchSize: z.number().int().min(1).max(10_000),
+		notificationDelayMs: z.number().int().min(0),
+		recoveryThresholdMs: z.number().int().min(1_000)
+	}),
+	push: z.strictObject({
+		webhookUrl: z.url(),
+		httpTimeoutMs: z.number().int().min(100).max(60_000)
 	})
 })
 
