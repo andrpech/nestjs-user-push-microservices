@@ -1,4 +1,4 @@
-.PHONY: help infra-up infra-down infra-logs infra-clean up-all down-all nuke d lint lint-fix format format-check typecheck pc pre-commit ls lsf fs fsw build-libs
+.PHONY: help infra-up infra-down infra-logs infra-clean up-all down-all nuke d run-dev run-prod env-dev env-prod lint lint-fix format format-check typecheck pc pre-commit ls lsf fs fsw build-libs
 
 # ---------------- Help ----------------
 
@@ -12,8 +12,12 @@ help:
 	@echo "  infra-clean   Stop infra and remove volumes"
 	@echo ""
 	@echo "Apps:"
-	@echo "  d             Bring up apps with watch (assumes infra-up)"
-	@echo "  up-all        Bring up apps prod-like detached (assumes infra-up)"
+	@echo "  run-dev       Materialize dev .env then bring up apps with watch (assumes infra-up)"
+	@echo "  run-prod      Materialize prod .env then bring up apps prod-like detached (assumes infra-up)"
+	@echo "  env-dev       Copy .env.example.dev → .env (overwrites)"
+	@echo "  env-prod      Copy .env.example.prod → .env (overwrites)"
+	@echo "  d             Alias for run-dev (kept for muscle memory)"
+	@echo "  up-all        Bring up apps detached using whatever .env is on disk"
 	@echo "  down-all      Stop apps"
 	@echo "  nuke          Stop everything and wipe volumes"
 	@echo ""
@@ -43,8 +47,21 @@ infra-clean:
 
 # ---------------- Apps ----------------
 
-d:
+env-dev:
+	cp apps/monolith/.env.example.dev apps/monolith/.env
+	@echo "apps/monolith/.env written from .env.example.dev"
+
+env-prod:
+	cp apps/monolith/.env.example.prod apps/monolith/.env
+	@echo "apps/monolith/.env written from .env.example.prod"
+
+run-dev: env-dev
 	docker compose -f docker-compose.apps.yml -f docker-compose.dev.override.yml up
+
+run-prod: env-prod
+	docker compose -f docker-compose.apps.yml up -d
+
+d: run-dev
 
 up-all:
 	docker compose -f docker-compose.apps.yml up -d
