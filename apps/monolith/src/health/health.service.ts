@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { HealthCheckResult, HealthCheckService, HealthIndicatorResult } from '@nestjs/terminus'
 
+import { RmqHealthIndicator } from '@app/rmq'
 import { UsersReadPrismaClient, UsersWritePrismaClient } from '../database/users.clients'
 
 @Injectable()
@@ -10,7 +11,8 @@ export class HealthService {
 		@Inject(UsersReadPrismaClient)
 		private readonly usersRead: UsersReadPrismaClient,
 		@Inject(UsersWritePrismaClient)
-		private readonly usersWrite: UsersWritePrismaClient
+		private readonly usersWrite: UsersWritePrismaClient,
+		private readonly rmq: RmqHealthIndicator
 	) {}
 
 	private async pingDb(
@@ -24,7 +26,8 @@ export class HealthService {
 	check(): Promise<HealthCheckResult> {
 		return this.health.check([
 			() => this.pingDb('users-read-db', this.usersRead),
-			() => this.pingDb('users-write-db', this.usersWrite)
+			() => this.pingDb('users-write-db', this.usersWrite),
+			() => this.rmq.check('rabbitmq')
 		])
 	}
 }

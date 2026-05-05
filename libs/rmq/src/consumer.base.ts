@@ -22,10 +22,20 @@ export abstract class RmqConsumer<T> implements OnModuleInit {
 			throw new Error(`@Consumer({...}) decorator missing on ${this.constructor.name}`)
 		}
 
-		const { queue, prefetch = 10 } = meta
+		const { queue, prefetch = 10, bindings = [], queueArgs } = meta
 		this.channel = this.conn.createChannel()
 
 		await this.channel.addSetup(async (ch: Channel) => {
+			await Promise.all(
+				bindings.map((b) =>
+					ch.assertExchange(b.exchange, b.exchangeType ?? 'topic', { durable: true })
+				)
+			)
+
+			await ch.assertQueue(queue, { durable: true, arguments: queueArgs })
+
+			await Promise.all(bindings.map((b) => ch.bindQueue(queue, b.exchange, b.routingKey)))
+
 			await ch.prefetch(prefetch)
 			await ch.consume(queue, (msg) => {
 				if (!msg) return
@@ -48,7 +58,10 @@ export abstract class RmqConsumer<T> implements OnModuleInit {
 			await this.handle(payload, ctx)
 			ch.ack(msg)
 		} catch (error) {
-			this.logger.error({ error, queue }, 'consumer handler failed')
+			this.logger.error(
+				{ error, queue, messageId: msg.properties.messageId },
+				'consumer handler failed'
+			)
 			ch.nack(msg, false, false)
 		}
 	}

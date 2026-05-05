@@ -1,10 +1,20 @@
 import 'reflect-metadata'
 
+import type { ExchangeType } from './producer.decorator'
+
 export const CONSUMER_METADATA_KEY = Symbol('rmq:consumer')
+
+export type ConsumerBinding = {
+	exchange: string
+	routingKey: string
+	exchangeType?: ExchangeType
+}
 
 export type ConsumerMetadata = {
 	queue: string
 	prefetch?: number
+	bindings?: ConsumerBinding[]
+	queueArgs?: Record<string, unknown>
 }
 
 export const Consumer =

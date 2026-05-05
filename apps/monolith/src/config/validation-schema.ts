@@ -8,6 +8,17 @@ export const MonolithConfigSchema = z.strictObject({
 	usersDb: z.strictObject({
 		readUrl: z.string().min(1),
 		writeUrl: z.string().min(1)
+	}),
+	rabbitmq: z.strictObject({
+		url: z.string().min(1)
+	}),
+	cron: z.strictObject({
+		usersExpr: z.string().min(1),
+		notifierExpr: z.string().min(1)
+	}),
+	outbox: z.strictObject({
+		batchSize: z.number().int().min(1).max(10_000),
+		stuckThresholdMs: z.number().int().min(1_000)
 	})
 })
 

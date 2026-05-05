@@ -1,6 +1,6 @@
 import { Logger, OnModuleInit } from '@nestjs/common'
 import type { ChannelWrapper } from 'amqp-connection-manager'
-import type { Channel, ConfirmChannel } from 'amqplib'
+import type { ConfirmChannel } from 'amqplib'
 
 import { ulid } from '@app/common'
 import { getProducerMetadata } from './decorators/producer.decorator'
@@ -19,11 +19,18 @@ export abstract class RmqProducer<T> implements OnModuleInit {
 			throw new Error(`@Producer({...}) decorator missing on ${this.constructor.name}`)
 		}
 
+		const { exchange, exchangeType = 'topic' } = meta
 		this.channel = this.conn.createConfirmChannel()
-		void this.channel.addSetup(async (ch: Channel | ConfirmChannel) => {
+		void this.channel.addSetup(async (ch: ConfirmChannel) => {
+			await ch.assertExchange(exchange, exchangeType, { durable: true })
 			ch.on('return', (msg) => {
 				this.logger.warn(
-					{ exchange: meta.exchange, routingKey: meta.routingKey, fields: msg.fields },
+					{
+						exchange: meta.exchange,
+						routingKey: meta.routingKey,
+						messageId: msg.properties.messageId,
+						fields: msg.fields
+					},
 					'unrouted message'
 				)
 			})
@@ -41,9 +48,9 @@ export abstract class RmqProducer<T> implements OnModuleInit {
 		await this.channel.publish(meta.exchange, meta.routingKey, body, {
 			persistent: true,
 			contentType: 'application/json',
-			messageId: ulid(),
+			messageId: opts.messageId ?? ulid(),
 			timestamp: Date.now(),
-			mandatory: true,
+			mandatory: opts.mandatory ?? true,
 			expiration: opts.expiration?.toString(),
 			headers: opts.headers
 		})

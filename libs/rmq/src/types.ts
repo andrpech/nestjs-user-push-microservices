@@ -10,4 +10,6 @@ export type ConsumerCtx = {
 export type PublishOpts = {
 	expiration?: number
 	headers?: Record<string, unknown>
+	mandatory?: boolean
+	messageId?: string
 }

@@ -2,9 +2,12 @@ import 'reflect-metadata'
 
 export const PRODUCER_METADATA_KEY = Symbol('rmq:producer')
 
+export type ExchangeType = 'topic' | 'direct' | 'fanout' | 'headers'
+
 export type ProducerMetadata = {
 	exchange: string
 	routingKey: string
+	exchangeType?: ExchangeType
 }
 
 export const Producer =
