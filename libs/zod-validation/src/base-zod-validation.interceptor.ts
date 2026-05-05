@@ -24,13 +24,14 @@ export class BaseZodValidationInterceptor implements NestInterceptor {
 		const request = context.switchToHttp().getRequest<{
 			body?: Record<string, unknown>
 			query?: Record<string, unknown>
+			params?: Record<string, unknown>
 		}>()
 
-		if (!request?.body && !request?.query) {
+		if (!request?.body && !request?.query && !request?.params) {
 			return next.handle()
 		}
 
-		const payload = { ...request.body, ...request.query }
+		const payload = { ...request.body, ...request.query, ...request.params }
 		const result = validateZodSchema(schema, payload)
 
 		if ('errorMessage' in result) {
@@ -43,6 +44,7 @@ export class BaseZodValidationInterceptor implements NestInterceptor {
 
 		if (request.body) request.body = result.data as Record<string, unknown>
 		if (request.query) request.query = result.data as Record<string, unknown>
+		if (request.params) request.params = result.data as Record<string, unknown>
 
 		return next.handle()
 	}

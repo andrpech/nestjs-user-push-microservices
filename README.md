@@ -28,6 +28,9 @@ Then:
 - Prometheus at <http://localhost:9090> — scrape targets for users (×2), notifier (×2), scheduler
 - Grafana at <http://localhost:3001> (`admin` / `admin`, anonymous viewer enabled) — `nupm/` folder with 4 auto-provisioned dashboards: service overview, notification flow, failure deep-dive, database
 - Jaeger UI at <http://localhost:16686> — full trace lifecycle across `users` → RMQ → `notifier` → webhook; every pino log line carries `trace_id` / `span_id`
+- Admin (notifier) read endpoints (Phase 11):
+  - `curl http://localhost:3000/admin/notifications?status=FAILED&limit=10` → cursor-paginated list
+  - `curl http://localhost:3000/admin/notifications/<ulid>` → full row + `history` JSONB
 
 ## Env templates
 
@@ -87,7 +90,7 @@ Tracked in `docs/plans/user-push-microservices.md` (13 phases). At a glance:
 - [x] Phase 8 — Metrics (Prometheus): `/metrics` per app, custom counters/histogram/gauges, RMQ queue-depth poller
 - [x] Phase 9 — Dashboards (Grafana): datasource + 4 dashboards provisioned from disk
 - [x] Phase 10 — Distributed tracing (OpenTelemetry): NodeSDK bootstrap, auto-instrumentation, Jaeger backend, trace context propagated across RMQ + injected into pino logs
-- [ ] Phase 11 — Admin: detail + list
+- [x] Phase 11 — Admin: detail + list (`GET /admin/notifications/:id`, `GET /admin/notifications?status=&limit=&cursor=`)
 - [ ] Phase 12 — Admin: retry + DLQ republish
 - [ ] Phase 13 — Optional remainder (replicas, K8s, leader-election)
 

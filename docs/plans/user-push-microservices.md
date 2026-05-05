@@ -266,24 +266,24 @@ OTel SDK initialized in each app's `main.ts` before any other imports (so auto-i
 
 ---
 
-## Phase 11: Admin — detail + list
+## ✅ Phase 11: Admin — detail + list
 
 **User stories**: 13, 14, 15
 
 ### What to build
 
-Notifier app gains an HTTP layer (`/admin/*` controller; existing Fastify boot stays). Two read endpoints: `GET /admin/notifications/:id` returns the full row including `history` JSONB, or 404 if missing. `GET /admin/notifications?status=FAILED&limit=100&cursor=<ulid>` returns cursor-paginated list (ULID is sortable, so cursor = "after this id"). Validation via zod (status enum-restricted; limit 1-1000; cursor optional ULID). Pagination response includes `nextCursor` if more results exist, `null` if exhausted. No auth — `X-Admin-Token` not enforced (documented as deferred to Phase 13 if/when needed).
+Notifier app gains an HTTP layer (`/admin/*` controller; existing Fastify boot stays). Two read endpoints: `GET /admin/notifications/:id` returns the full row including `history` JSONB, or 404 if missing. `GET /admin/notifications?status=FAILED&limit=100&cursor=<ulid>` returns cursor-paginated list (ULID is sortable, so cursor = "after this id"). Validation via zod (status enum-restricted; limit 1-1000; cursor optional ULID). Pagination response includes `nextCursor` if more results exist, `null` if exhausted. No auth — `X-Admin-Token` not enforced (documented as deferred to Phase 13 if/when needed). The shared `BaseZodValidationInterceptor` was extended to also fold `request.params` into the validation payload so route-param schemas work the same way as body/query schemas.
 
 ### Acceptance criteria
 
-- [ ] After Phase 6 produces FAILED rows, `GET /admin/notifications?status=FAILED&limit=10` returns up to 10 rows with `nextCursor` if more exist
-- [ ] Pagination iterates correctly: following `nextCursor` repeatedly returns the full set with no duplicates and no gaps
-- [ ] `GET /admin/notifications/:id` returns the full row including `history` array when ID exists
-- [ ] `GET /admin/notifications/01H...nonexistent` returns 404
-- [ ] Invalid query params (e.g. `limit=99999`, `status=BADENUM`) return 400 with zod error detail
-- [ ] Endpoints are exposed only on the notifier app (not on users or scheduler)
-- [ ] Pino log line includes `reqId` for admin requests
-- [ ] No auth check (documented assumption: behind internal network)
+- [x] After Phase 6 produces FAILED rows, `GET /admin/notifications?status=FAILED&limit=10` returns up to 10 rows with `nextCursor` if more exist _(verified — current FAILED set returns rows + null cursor when exhausted)_
+- [x] Pagination iterates correctly: following `nextCursor` repeatedly returns the full set with no duplicates and no gaps _(verified — walked 52 rows in pages of 3, all unique, descending order, set equals one-shot fetch)_
+- [x] `GET /admin/notifications/:id` returns the full row including `history` array when ID exists _(verified: `01KQWAR008XFCWHA90T5NBPWGD` returns id/status/4 history items)_
+- [x] `GET /admin/notifications/01H...nonexistent` returns 404 _(verified — `notification 01H99999999999999999999999 not found`)_
+- [x] Invalid query params (e.g. `limit=99999`, `status=BADENUM`) return 400 with zod error detail _(verified for `limit=99999`, `status=BADENUM`, and bad ULID id — all 400 with zod message)_
+- [x] Endpoints are exposed only on the notifier app (not on users or scheduler) _(verified — `users:3000/admin/notifications` and `scheduler:3002/admin/notifications` both return 404)_
+- [x] Pino log line includes `reqId` for admin requests _(verified — `request completed {req:{id:"req-1g",method:"GET",url:"/admin/notifications?…"}}` plus OTel `trace_id`/`span_id` carried over from Phase 10)_
+- [x] No auth check (documented assumption: behind internal network)
 
 ---
 

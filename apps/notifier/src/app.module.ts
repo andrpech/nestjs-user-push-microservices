@@ -7,6 +7,7 @@ import { RmqModule } from '@app/rmq'
 import { BaseZodValidationInterceptor } from '@app/zod-validation'
 import { ConfigurationModule } from './config'
 import { HealthModule } from './health/health.module'
+import { AdminModule } from './modules/admin/admin.module'
 import { NotifierModule } from './modules/notifier/notifier.module'
 
 @Module({
@@ -16,7 +17,8 @@ import { NotifierModule } from './modules/notifier/notifier.module'
 		MetricsModule,
 		RmqModule.forRoot({ url: (): string => process.env.RABBITMQ_URL ?? '' }),
 		HealthModule,
-		NotifierModule
+		NotifierModule,
+		AdminModule
 	],
 	providers: [
 		{
