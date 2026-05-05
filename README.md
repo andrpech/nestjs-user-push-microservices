@@ -28,6 +28,8 @@ Then:
 - Prometheus at <http://localhost:9090> — scrape targets for users (×2), notifier (×2), scheduler
 - Grafana at <http://localhost:3001> (`admin` / `admin`, anonymous viewer enabled) — `nupm/` folder with 4 auto-provisioned dashboards: service overview, notification flow, failure deep-dive, database
 - Jaeger UI at <http://localhost:16686> — full trace lifecycle across `users` → RMQ → `notifier` → webhook; every pino log line carries `trace_id` / `span_id`
+- Postgres replica at `localhost:5433` (streaming replication standby — `*_READ_DB_URL` already points here in dev/prod templates)
+- Un-routable cron messages land in the `unrouted` queue (Phase 13 alternate-exchange) — inspect via RabbitMQ UI
 - Admin (notifier) endpoints:
   - `curl http://localhost:3000/admin/notifications?status=FAILED&limit=10` → cursor-paginated list
   - `curl http://localhost:3000/admin/notifications/<ulid>` → full row + `history` JSONB
@@ -94,11 +96,10 @@ Tracked in `docs/plans/user-push-microservices.md` (13 phases). At a glance:
 - [x] Phase 10 — Distributed tracing (OpenTelemetry): NodeSDK bootstrap, auto-instrumentation, Jaeger backend, trace context propagated across RMQ + injected into pino logs
 - [x] Phase 11 — Admin: detail + list (`GET /admin/notifications/:id`, `GET /admin/notifications?status=&limit=&cursor=`)
 - [x] Phase 12 — Admin: retry + DLQ republish (`POST /admin/notifications/:id/retry`, `POST /admin/dlq/inbox/republish`)
-- [ ] Phase 13 — Optional remainder (replicas, K8s, leader-election)
+- [~] Phase 13 — Optional remainder: shipped graceful shutdown, postgres read replica, alternate-exchange. Skipped: K8s manifests, scheduler leader-election, full live/ready probe split.
 
 ## Conventions
 
-- Markus-style code style: tabs, 100-col, no semis, single-quote, sorted imports.
 - Lint via `oxlint`. Format via `prettier`.
 - Husky pre-commit hook runs `make pre-commit` on `main`, skips on other branches (PR CI is the gate).
 - No tests — E2E smoke (curl POST → wait → check webhook) is the QA path.

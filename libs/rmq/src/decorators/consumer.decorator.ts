@@ -8,6 +8,9 @@ export type ConsumerBinding = {
 	exchange: string
 	routingKey: string
 	exchangeType?: ExchangeType
+	// Must match the producer's exchange args so assertExchange is idempotent
+	// across both sides — e.g. { 'alternate-exchange': 'unrouted.alt' }.
+	exchangeArgs?: Record<string, unknown>
 }
 
 // When set, the base consumer publishes the original message to this exchange

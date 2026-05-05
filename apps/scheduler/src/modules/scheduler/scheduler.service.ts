@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common'
+import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import { SchedulerRegistry } from '@nestjs/schedule'
 import { CronJob } from 'cron'
 import { PinoLogger } from 'nestjs-pino'
@@ -8,7 +8,9 @@ import { NotifierCronProducer } from './producers/notifier-cron.producer'
 import { UsersCronProducer } from './producers/users-cron.producer'
 
 @Injectable()
-export class SchedulerService implements OnModuleInit {
+export class SchedulerService implements OnModuleInit, OnModuleDestroy {
+	private readonly registeredJobs: string[] = []
+
 	constructor(
 		private readonly registry: SchedulerRegistry,
 		@Inject(ConfigurationInjectKey)
@@ -33,8 +35,23 @@ export class SchedulerService implements OnModuleInit {
 	private registerJob(name: string, expr: string, tick: () => void): void {
 		const job = new CronJob(expr, tick)
 		this.registry.addCronJob(name, job)
+		this.registeredJobs.push(name)
 		job.start()
 		this.logger.info({ job: name, expr }, 'cron job registered')
+	}
+
+	onModuleDestroy(): void {
+		for (const name of this.registeredJobs) {
+			try {
+				this.registry.deleteCronJob(name)
+				this.logger.info({ job: name }, 'cron job stopped')
+			} catch (error) {
+				this.logger.warn(
+					{ job: name, error: error instanceof Error ? error.message : String(error) },
+					'cron job stop failed'
+				)
+			}
+		}
 	}
 
 	private async fire(

@@ -13,7 +13,8 @@ import { CronTick, CronTickSchema } from '../dto/cron-tick.dto'
 		{
 			exchange: 'system.cron',
 			routingKey: 'cron.users',
-			exchangeType: 'topic'
+			exchangeType: 'topic',
+			exchangeArgs: { 'alternate-exchange': 'unrouted.alt' }
 		}
 	]
 })

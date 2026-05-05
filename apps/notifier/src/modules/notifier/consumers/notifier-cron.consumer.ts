@@ -16,7 +16,8 @@ import { PushSendProducer } from '../producers/push-send.producer'
 		{
 			exchange: 'system.cron',
 			routingKey: 'cron.notifier',
-			exchangeType: 'topic'
+			exchangeType: 'topic',
+			exchangeArgs: { 'alternate-exchange': 'unrouted.alt' }
 		}
 	]
 })

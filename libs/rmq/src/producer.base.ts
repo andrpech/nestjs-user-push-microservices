@@ -24,10 +24,13 @@ export abstract class RmqProducer<T> implements OnModuleInit {
 			throw new Error(`@Producer({...}) decorator missing on ${this.constructor.name}`)
 		}
 
-		const { exchange, exchangeType = 'topic' } = meta
+		const { exchange, exchangeType = 'topic', exchangeArgs } = meta
 		this.channel = this.conn.createConfirmChannel()
 		void this.channel.addSetup(async (ch: ConfirmChannel) => {
-			await ch.assertExchange(exchange, exchangeType, { durable: true })
+			await ch.assertExchange(exchange, exchangeType, {
+				durable: true,
+				arguments: exchangeArgs
+			})
 			ch.on('return', (msg) => {
 				this.logger.warn(
 					{

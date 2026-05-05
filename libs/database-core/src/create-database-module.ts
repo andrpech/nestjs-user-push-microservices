@@ -5,6 +5,7 @@ import { createExtendedPrismaClient, QueryObserver } from './create-prisma-clien
 type ExtensibleClient = {
 	$extends: (def: unknown) => unknown
 	$connect?: () => Promise<unknown>
+	$disconnect?: () => Promise<unknown>
 }
 
 type ClientConstructor<T extends ExtensibleClient> = new (opts: { datasourceUrl: string }) => T
@@ -40,6 +41,17 @@ export const createDatabaseModule = <T extends ExtensibleClient>(
 			if (typeof client.$connect === 'function') {
 				await client.$connect()
 			}
+
+			// Monkey-patch onModuleDestroy onto the factory-created instance so
+			// Nest's enableShutdownHooks invokes $disconnect cleanly. PrismaClient
+			// itself doesn't implement Nest's lifecycle interface.
+			;(client as ExtensibleClient & { onModuleDestroy?: () => Promise<void> }).onModuleDestroy =
+				async (): Promise<void> => {
+					if (typeof client.$disconnect === 'function') {
+						await client.$disconnect()
+						logger.log('prisma client disconnected')
+					}
+				}
 
 			return client
 		}

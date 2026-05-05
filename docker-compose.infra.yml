@@ -11,12 +11,50 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./infra/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./infra/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U app -d postgres']
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 10s
+    networks:
+      - nupm-net
+
+  postgres-replica:
+    # Phase 13 — streaming-replication standby. App `*_READ_DB_URL` env points
+    # here; writes hit the primary (`postgres`) only.
+    image: postgres:16-alpine
+    container_name: nupm-postgres-replica
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: pwd
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+      - ./infra/postgres/replica-entrypoint.sh:/usr/local/bin/replica-entrypoint.sh:ro
+    entrypoint: ['/usr/local/bin/replica-entrypoint.sh']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U app -d postgres && psql -U app -d postgres -tAc "SELECT pg_is_in_recovery()" | grep -q t'
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
     networks:
       - nupm-net
 
@@ -108,6 +146,7 @@ services:
 
 volumes:
   postgres-data:
+  postgres-replica-data:
   rabbitmq-data:
   prometheus-data:
   grafana-data:

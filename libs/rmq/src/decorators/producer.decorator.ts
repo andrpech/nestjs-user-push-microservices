@@ -8,6 +8,8 @@ export type ProducerMetadata = {
 	exchange: string
 	routingKey: string
 	exchangeType?: ExchangeType
+	// e.g. { 'alternate-exchange': 'unrouted.alt' } for the AE pattern.
+	exchangeArgs?: Record<string, unknown>
 }
 
 export const Producer =
