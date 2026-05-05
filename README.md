@@ -12,10 +12,12 @@ Prereqs: Docker, Node 22 (`nvm use`), npm.
 nvm use                       # node 22
 npm install                   # install all workspace deps
 make infra-up                 # postgres + rabbitmq, detached
-make run-dev                  # materialize dev .env, then apps with watch (foreground)
+make run-dev                  # materialize each app's .env, then apps with watch (foreground)
 ```
 
-`run-dev` copies `apps/monolith/.env.example.dev` → `apps/monolith/.env` (overwriting), then brings up the dev compose chain. Use `make run-prod` for the prod-like flavor (slower cron, larger outbox batch, detached).
+`run-dev` copies `.env.example.dev` → `.env` for each of users / notifier / scheduler, then brings up the dev compose chain. Use `make run-prod` for the prod-like flavor (slower cron, larger outbox batch, detached).
+
+Traffic enters through **nginx** on host `:3000` and is round-robined across the `users` replicas. Phase 11+ admin paths (`/admin/*`) are reserved for the notifier service.
 
 Then:
 
@@ -52,10 +54,11 @@ make pc                       # typecheck + lint + format check
 ## Layout
 
 ```
-apps/users/                   # POST /users + outbox publisher (phase 7+; replicas=2 in prod)
+apps/users/                   # POST /users + outbox publisher (phase 7+; replicas=2)
 apps/notifier/                # ingest + push delivery + retry/DLQ (phase 7+; replicas=2)
 apps/scheduler/               # cron tick producer (phase 7+; SINGLETON — do not scale)
 libs/{common,zod-validation,database-core,rmq}/  # shared libraries
+infra/nginx/nginx.conf        # ingress: routes /users + /lhealth/rhealth → users, /admin/* → notifier
 infra/postgres/init.sql       # creates `users` and `notifications` databases
 docs/INITIAL_PLAN.md          # technical design (markdown blueprint)
 docs/prds/                    # product requirement docs

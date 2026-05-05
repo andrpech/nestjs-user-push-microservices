@@ -197,7 +197,7 @@ The monolith is decomposed into three deployable apps with no business code chan
   - [x] `apps/notifier` → checks RMQ + NotificationsRead + NotificationsWrite DB
 - [x] `apps/scheduler/package.json` does not list `@prisma/client` or `prisma`
 - [x] `apps/scheduler/` has no `prisma/` folder
-- [ ] Scaling notifier: `docker compose up -d --scale notifier=3` works, all 3 consume from queues, no duplicate webhook deliveries observed in smoke test (idempotency contract holds) _(idempotency contract verified in phase 5 — scaling step not exercised live)_
+- [x] Scaling notifier: `docker compose up -d --scale notifier=3` works, all 3 consume from queues, no duplicate webhook deliveries observed in smoke test (idempotency contract holds) _(verified at replicas=2 for both users + notifier with nginx as LB — 10 POSTs through nginx → 10 unique webhook hits, 0 duplicates, requests rotated across both users replicas)_
 - [x] Scaling scheduler is documented as forbidden (compose comment + README warning)
 - [x] Migrations run idempotently when restarting app pods (Prisma 5 advisory lock prevents crash-loops with N=2 replicas) _(verified — second run logged "No pending migrations to apply.")_
 - [x] Each app reads its own `.env`; missing required vars per app crash that app at boot with zod error _(verified — each app has its own zod schema; missing `NOTIFICATIONS_WRITE_DB_URL` on notifier crashes that app, not users)_

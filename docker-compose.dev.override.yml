@@ -14,10 +14,6 @@ services:
     environment:
       NODE_ENV: development
       CHOKIDAR_USEPOLLING: 'true'
-    ports:
-      - '3000:3000'
-    deploy:
-      replicas: 1
     volumes:
       - ./apps/users/src:/app/apps/users/src
       - ./apps/users/tsconfig.json:/app/apps/users/tsconfig.json
@@ -33,8 +29,6 @@ services:
     environment:
       NODE_ENV: development
       CHOKIDAR_USEPOLLING: 'true'
-    deploy:
-      replicas: 1
     volumes:
       - ./apps/notifier/src:/app/apps/notifier/src
       - ./apps/notifier/tsconfig.json:/app/apps/notifier/tsconfig.json

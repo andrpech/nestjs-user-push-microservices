@@ -69,6 +69,29 @@ services:
     networks:
       - nupm-net
 
+  # nginx fronts users (replica round-robin via Docker DNS) and reserves /admin/*
+  # for phase-11 notifier endpoints. The host's :3000 hits nginx, not users.
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nupm-nginx
+    ports:
+      - '3000:80'
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    healthcheck:
+      test: ['CMD', 'wget', '-qO', '/dev/null', 'http://localhost:80/ngx-health']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    depends_on:
+      users:
+        condition: service_healthy
+      notifier:
+        condition: service_healthy
+    networks:
+      - nupm-net
+
   # Singleton — DO NOT scale this service. Cron firings would multiply across
   # replicas because there is no leader-election yet (planned for phase 13).
   scheduler:
