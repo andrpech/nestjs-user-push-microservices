@@ -12,4 +12,8 @@ export type PublishOpts = {
 	headers?: Record<string, unknown>
 	mandatory?: boolean
 	messageId?: string
+	// Per-publish override for the decorator's routingKey. Used by multi-type
+	// producers (e.g. ingest.user-welcome vs ingest.password-changed) that share
+	// a single exchange but differ per call.
+	routingKey?: string
 }

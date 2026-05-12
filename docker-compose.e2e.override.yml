@@ -1,0 +1,30 @@
+services:
+  # nginx-based receiver that returns 200 to any POST /hook. The notifier's
+  # WEBHOOK_URL is overridden below to target this service instead of the
+  # outbound webhook.site URL baked into .env.
+  webhook-receiver:
+    image: nginx:1.27-alpine
+    container_name: nupm-webhook-receiver
+    volumes:
+      - ./infra/webhook-receiver/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - '8088:80'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO', '/dev/null', 'http://localhost:80/health']
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+    networks:
+      - nupm-net
+
+  # Point the notifier at the receiver. Docker compose merges environment with
+  # env_file; explicit environment wins on conflict.
+  notifier:
+    environment:
+      WEBHOOK_URL: 'http://webhook-receiver/hook'
+    depends_on:
+      notifier-migrator:
+        condition: service_completed_successfully
+      webhook-receiver:
+        condition: service_healthy

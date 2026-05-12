@@ -1,4 +1,4 @@
-.PHONY: help infra-up infra-down infra-logs infra-clean up-all down-all nuke d run-dev run-prod env-dev env-prod lint lint-fix format format-check typecheck pc pre-commit ls lsf fs fsw build-libs
+.PHONY: help infra-up infra-down infra-logs infra-clean up-all down-all nuke d run-dev run-prod env-dev env-prod lint lint-fix format format-check typecheck pc pre-commit ls lsf fs fsw build-libs test test-db e2e e2e-up e2e-down e2e-test e2e-logs
 
 # ---------------- Help ----------------
 
@@ -113,3 +113,45 @@ fs:
 
 fsw:
 	npm run format:staged:write
+
+# ---------------- Tests ----------------
+
+# Pure-module focus tests (TypeCatalog etc.). No infra needed.
+test:
+	npx vitest run
+
+# Includes DB-dependent tests against the dev infra (assumes `make infra-up`).
+# Set TEST_USERS_DB_URL / TEST_NOTIFICATIONS_DB_URL or rely on the defaults.
+test-db:
+	RUN_DB_TESTS=1 npx vitest run
+
+# ---------------- E2E ----------------
+
+E2E_INFRA   := docker compose -f docker-compose.infra.yml
+E2E_APPS    := docker compose -f docker-compose.apps.yml -f docker-compose.dev.override.yml -f docker-compose.e2e.override.yml
+
+# Bring up the full stack (infra + apps + webhook-receiver) detached and wait
+# until the host-facing health endpoints respond. Infra is brought up first so
+# the `nupm-net` network exists before the apps compose (which treats it as
+# external) starts.
+e2e-up: env-dev
+	$(E2E_INFRA) up -d
+	$(E2E_APPS) up -d --build
+	@echo "waiting for users service on :3000 ..."
+	@until curl -fsS http://localhost:3000/rhealth >/dev/null 2>&1; do sleep 2; done
+	@echo "stack ready"
+
+e2e-down:
+	$(E2E_APPS) down -v --remove-orphans
+	$(E2E_INFRA) down -v --remove-orphans
+
+e2e-logs:
+	$(E2E_APPS) logs -f --tail=200 users notifier scheduler webhook-receiver
+
+# Assumes `make e2e-up` already ran. Runs vitest against test/e2e/**.
+e2e-test:
+	RUN_E2E_TESTS=1 npx vitest run --config vitest.e2e.config.ts
+
+# All-in-one: bring up, run tests, leave stack up for inspection. Use
+# `make e2e-down` when finished.
+e2e: e2e-up e2e-test

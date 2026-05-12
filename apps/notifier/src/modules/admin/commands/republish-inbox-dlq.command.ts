@@ -4,12 +4,12 @@ import type { GetMessage } from 'amqplib'
 
 import { Command } from '@app/common'
 import { RmqConnection } from '@app/rmq'
-import { UserCreatedEventSchema } from '../../notifier/dto/user-created.event'
-import { UserCreatedProducer } from '../producers/user-created.producer'
+import { IngestEventSchema } from '../../notifier/dto/ingest.event'
+import { IngestProducer } from '../producers/ingest.producer'
 
-const DLQ = 'notifier.user-created.dlq'
+const DLQ = 'notifier.ingest.dlq'
 const DLX = 'notifications.dlx'
-const DLX_ROUTING_KEY = 'user.created'
+const DLX_ROUTING_KEY = 'ingest'
 
 const parseFailed = Symbol('parseFailed')
 
@@ -21,14 +21,17 @@ const safeJsonParse = (raw: string): unknown => {
 	}
 }
 
+const routingKeyFor = (type: string): string => `ingest.${type.toLowerCase().replace(/_/g, '-')}`
+
 export type RepublishInput = { ids?: string[] }
 export type RepublishResult = { republished: number; failed: number; skipped: number }
 
-// Drains the inbox DLQ, optionally filtering by `userId` from the payload, and
-// republishes matched messages to `users.events / user.created`. Unmatched and
-// invalid messages are re-published back to the DLX (recreating them in the
-// DLQ at the tail) so we make exactly one pass without revisiting messages —
-// rabbitmq's `nack(requeue=true)` returns to the head and would loop us.
+// Drains the ingest DLQ, optionally filtering by sourceEventId from the
+// payload, and republishes matched messages back to notifications.ingest with
+// a per-type routing key derived from the envelope. Unmatched and invalid
+// messages re-publish back through the DLX (recreating them in the DLQ tail)
+// so a single pass never revisits messages — rabbitmq's `nack(requeue=true)`
+// returns to the head and would loop us.
 
 // eslint-disable no-await-in-loop -- the drain is fundamentally sequential:
 // each `get` depends on the previous iteration's ack/publish having committed.
@@ -39,7 +42,7 @@ export class RepublishInboxDlqCommand implements Command<RepublishInput, Republi
 
 	constructor(
 		private readonly conn: RmqConnection,
-		private readonly producer: UserCreatedProducer
+		private readonly producer: IngestProducer
 	) {}
 
 	async execute({ ids }: RepublishInput): Promise<RepublishResult> {
@@ -77,7 +80,7 @@ export class RepublishInboxDlqCommand implements Command<RepublishInput, Republi
 					await requeueViaDlx(msg)
 					result.failed++
 				} else {
-					const parse = UserCreatedEventSchema.safeParse(json)
+					const parse = IngestEventSchema.safeParse(json)
 					if (!parse.success) {
 						this.logger.warn(
 							{ messageId, error: parse.error.message },
@@ -85,16 +88,17 @@ export class RepublishInboxDlqCommand implements Command<RepublishInput, Republi
 						)
 						await requeueViaDlx(msg)
 						result.failed++
-					} else if (filter && !filter.has(parse.data.userId)) {
-						// `ids` in the request body matches against the payload's userId — the
-						// natural admin-facing key. AMQP message_id is a separate concept and
-						// not always set (e.g. messages planted via the management UI).
+					} else if (filter && !filter.has(parse.data.sourceEventId)) {
+						// `ids` filters against sourceEventId — the natural admin-facing key
+						// for an ingest event. AMQP message_id is a separate concept and not
+						// always set (e.g. messages planted via the management UI).
 						await requeueViaDlx(msg)
 						result.skipped++
 					} else {
 						try {
 							await this.producer.publish(parse.data, {
-								messageId: messageId ?? undefined
+								messageId: messageId ?? parse.data.sourceEventId,
+								routingKey: routingKeyFor(parse.data.type)
 							})
 							await drainChannel.ack(msg)
 							result.republished++

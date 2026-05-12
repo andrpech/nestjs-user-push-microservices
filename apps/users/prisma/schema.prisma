@@ -9,11 +9,26 @@ generator client {
 }
 
 model User {
+  id        String   @id
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  outboxEvents UsersOutbox[]
+
+  @@map("users")
+}
+
+model UsersOutbox {
   id                  String    @id
-  name                String
+  aggregateId         String    @map("aggregate_id")
+  eventType           String    @map("event_type")
+  payload             Json
+  sourceEventId       String    @map("source_event_id")
   publishedAt         DateTime? @map("published_at")
   publishingStartedAt DateTime? @map("publishing_started_at")
   createdAt           DateTime  @default(now()) @map("created_at")
 
-  @@map("users")
+  aggregate User @relation(fields: [aggregateId], references: [id])
+
+  @@map("users_outbox")
 }

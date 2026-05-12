@@ -1,12 +1,12 @@
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { PinoLogger } from 'nestjs-pino'
 import { ZodType } from 'zod'
 
 import { Consumer, RmqConnection, RmqConsumer } from '@app/rmq'
-import { ClaimDueNotificationsCommand } from '../commands/claim-due-notifications.command'
-import { RecoverStuckNotificationsCommand } from '../commands/recover-stuck-notifications.command'
+import { ConfigurationInjectKey, ConfigurationType } from '../../../config'
 import { CronTick, CronTickSchema } from '../dto/cron-tick.dto'
 import { PushSendProducer } from '../producers/push-send.producer'
+import { NotificationStateMachine } from '../state-machine/notification.state-machine'
 
 @Injectable()
 @Consumer({
@@ -26,8 +26,9 @@ export class NotifierCronConsumer extends RmqConsumer<CronTick> {
 
 	constructor(
 		conn: RmqConnection,
-		private readonly recover: RecoverStuckNotificationsCommand,
-		private readonly claim: ClaimDueNotificationsCommand,
+		@Inject(ConfigurationInjectKey)
+		private readonly config: ConfigurationType,
+		private readonly stateMachine: NotificationStateMachine,
 		private readonly producer: PushSendProducer,
 		private readonly pinoLogger: PinoLogger
 	) {
@@ -36,17 +37,15 @@ export class NotifierCronConsumer extends RmqConsumer<CronTick> {
 	}
 
 	async handle(): Promise<void> {
-		const { recovered, failed: recoveryFailed } = await this.recover.execute()
-		const claimed = await this.claim.execute()
+		const { recovered, failed: recoveryFailed } = await this.stateMachine.recoverStuck({
+			thresholdMs: this.config.notifier.recoveryThresholdMs,
+			maxRedrives: this.config.retry.maxRedrives
+		})
 
-		const dispatched = await Promise.all(
-			claimed.map(async (n) => {
-				await this.producer.publish(
-					{ userId: n.userId, name: n.name, notificationId: n.id },
-					{ messageId: n.id }
-				)
-				return n.id
-			})
+		const claimed = await this.stateMachine.claim(this.config.notifier.batchSize)
+
+		await Promise.all(
+			claimed.map((row) => this.producer.publish({ notificationId: row.id }, { messageId: row.id }))
 		)
 
 		if (recovered > 0 || recoveryFailed > 0 || claimed.length > 0) {
@@ -55,7 +54,7 @@ export class NotifierCronConsumer extends RmqConsumer<CronTick> {
 					recovered,
 					recoveryFailed,
 					claimed: claimed.length,
-					dispatched: dispatched.length
+					dispatched: claimed.length
 				},
 				'notifier tick'
 			)

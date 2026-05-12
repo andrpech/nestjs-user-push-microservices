@@ -4,10 +4,14 @@ import type { Channel } from 'amqplib'
 
 import { RmqConnection } from '@app/rmq'
 
-const RETRY_TTL_MS = 5_000
+const INGEST_RETRY_TTL_MS = 5_000
 
-// Phase 6 retry/DLQ topology — declared at boot so the (consumer-less) retry queues
-// and the DLQ exist before any failure-mode message hits them. Idempotent.
+// v2 ingest topology. The notifier owns:
+//   - notifications.ingest      — single inbound exchange for every type
+//   - notifier.ingest queue     — bound to ingest.# via IngestConsumer decorator
+//   - notifier.ingest.retry     — 5s TTL ring for transient ingest failures
+//   - notifier.ingest.dlq       — terminal storage for exhausted-retry messages
+//   - notifications.work + retry.work + push-send.retry — unchanged send-side path
 @Injectable()
 export class NotifierTopologyService implements OnModuleInit {
 	private readonly logger = new Logger(NotifierTopologyService.name)
@@ -21,7 +25,7 @@ export class NotifierTopologyService implements OnModuleInit {
 			await Promise.all([
 				ch.assertExchange('notifications.work', 'topic', { durable: true }),
 				ch.assertExchange('notifications.retry.work', 'topic', { durable: true }),
-				ch.assertExchange('users.events', 'topic', { durable: true }),
+				ch.assertExchange('notifications.ingest', 'topic', { durable: true }),
 				ch.assertExchange('notifications.retry.events', 'topic', { durable: true }),
 				ch.assertExchange('notifications.dlx', 'topic', { durable: true })
 			])
@@ -36,26 +40,22 @@ export class NotifierTopologyService implements OnModuleInit {
 			})
 			await ch.bindQueue('notifier.push-send.retry', 'notifications.retry.work', 'push.send')
 
-			// Inbox-side retry queue: fixed 5s TTL; on TTL → users.events / user.created
-			await ch.assertQueue('notifier.user-created.retry', {
+			// Ingest-side retry queue: 5s TTL; on TTL → notifications.ingest with the
+			// original routing key preserved (no x-dead-letter-routing-key override).
+			await ch.assertQueue('notifier.ingest.retry', {
 				durable: true,
 				arguments: {
-					'x-dead-letter-exchange': 'users.events',
-					'x-dead-letter-routing-key': 'user.created',
-					'x-message-ttl': RETRY_TTL_MS
+					'x-dead-letter-exchange': 'notifications.ingest',
+					'x-message-ttl': INGEST_RETRY_TTL_MS
 				}
 			})
-			await ch.bindQueue(
-				'notifier.user-created.retry',
-				'notifications.retry.events',
-				'user.created'
-			)
+			await ch.bindQueue('notifier.ingest.retry', 'notifications.retry.events', 'ingest.#')
 
-			// Terminal DLQ — populated explicitly by the consumer when retries exhaust
-			await ch.assertQueue('notifier.user-created.dlq', { durable: true })
-			await ch.bindQueue('notifier.user-created.dlq', 'notifications.dlx', 'user.created')
+			// Terminal DLQ — populated by IngestConsumer's base-class DLX publish.
+			await ch.assertQueue('notifier.ingest.dlq', { durable: true })
+			await ch.bindQueue('notifier.ingest.dlq', 'notifications.dlx', 'ingest.#')
 
-			this.logger.log('phase 6 retry topology asserted')
+			this.logger.log('v2 ingest topology asserted')
 		})
 	}
 }

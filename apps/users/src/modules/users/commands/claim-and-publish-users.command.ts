@@ -3,13 +3,9 @@ import { PinoLogger } from 'nestjs-pino'
 
 import { Command } from '@app/common'
 import { ConfigurationInjectKey, ConfigurationType } from '../../../config'
-import { UsersWritePrismaClient } from '../../../database/users.clients'
-import { UserCreatedProducer } from '../producers/user-created.producer'
-
-type ClaimedRow = {
-	id: string
-	name: string
-}
+import type { IngestEvent } from '../dto/ingest.event'
+import { IngestProducer } from '../producers/ingest.producer'
+import { ClaimedOutboxRow, UsersOutboxRepository } from '../repositories/users-outbox.repository'
 
 export type ClaimAndPublishOutput = {
 	swept: number
@@ -18,22 +14,23 @@ export type ClaimAndPublishOutput = {
 	failed: number
 }
 
+const routingKeyFor = (type: string): string => `ingest.${type.toLowerCase().replace(/_/g, '-')}`
+
 @Injectable()
 export class ClaimAndPublishUsersCommand implements Command<void, ClaimAndPublishOutput> {
 	constructor(
-		@Inject(UsersWritePrismaClient)
-		private readonly write: UsersWritePrismaClient,
 		@Inject(ConfigurationInjectKey)
 		private readonly config: ConfigurationType,
-		private readonly producer: UserCreatedProducer,
+		private readonly outbox: UsersOutboxRepository,
+		private readonly producer: IngestProducer,
 		private readonly logger: PinoLogger
 	) {
 		this.logger.setContext(ClaimAndPublishUsersCommand.name)
 	}
 
 	async execute(): Promise<ClaimAndPublishOutput> {
-		const swept = await this.sweepStuck()
-		const claimed = await this.claimBatch()
+		const swept = await this.outbox.sweepStuck(this.config.outbox.stuckThresholdMs)
+		const claimed = await this.outbox.claimBatch(this.config.outbox.batchSize)
 
 		const results = await Promise.all(claimed.map((row) => this.publishOne(row)))
 		const published = results.filter((ok) => ok).length
@@ -46,54 +43,21 @@ export class ClaimAndPublishUsersCommand implements Command<void, ClaimAndPublis
 		return { swept, claimed: claimed.length, published, failed }
 	}
 
-	private async publishOne(row: ClaimedRow): Promise<boolean> {
+	private async publishOne(row: ClaimedOutboxRow): Promise<boolean> {
 		try {
-			await this.producer.publish({ userId: row.id, name: row.name })
-			await this.markPublished(row.id)
+			const event = row.payload as IngestEvent
+			await this.producer.publish(event, {
+				messageId: row.sourceEventId,
+				routingKey: routingKeyFor(event.type)
+			})
+			await this.outbox.markPublished(row.id)
 			return true
 		} catch (error) {
-			this.logger.error({ err: error, userId: row.id }, 'outbox publish failed; row stays claimed')
+			this.logger.error(
+				{ err: error, outboxId: row.id },
+				'outbox publish failed; row stays claimed'
+			)
 			return false
 		}
-	}
-
-	private async sweepStuck(): Promise<number> {
-		const thresholdMs = this.config.outbox.stuckThresholdMs
-		const result = await this.write.$executeRawUnsafe<number>(
-			`UPDATE users
-			 SET publishing_started_at = NULL
-			 WHERE published_at IS NULL
-			   AND publishing_started_at IS NOT NULL
-			   AND publishing_started_at < NOW() - ($1::int * INTERVAL '1 millisecond')`,
-			thresholdMs
-		)
-		return Number(result)
-	}
-
-	private claimBatch(): Promise<ClaimedRow[]> {
-		const { batchSize } = this.config.outbox
-		return this.write.$queryRawUnsafe<ClaimedRow[]>(
-			`WITH eligible AS (
-				SELECT id FROM users
-				WHERE published_at IS NULL AND publishing_started_at IS NULL
-				ORDER BY created_at ASC
-				LIMIT $1
-				FOR UPDATE SKIP LOCKED
-			)
-			UPDATE users
-			SET publishing_started_at = NOW()
-			WHERE id IN (SELECT id FROM eligible)
-			RETURNING id, name`,
-			batchSize
-		)
-	}
-
-	private async markPublished(userId: string): Promise<void> {
-		await this.write.$executeRawUnsafe(
-			`UPDATE users
-			 SET published_at = NOW(), publishing_started_at = NULL
-			 WHERE id = $1`,
-			userId
-		)
 	}
 }

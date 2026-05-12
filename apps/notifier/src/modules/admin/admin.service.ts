@@ -1,7 +1,7 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 
 import { Notification, NotificationStatus } from '../../../prisma/generated'
-import { NotificationsReadPrismaClient } from '../../database/notifications.clients'
+import { NotificationsRepository } from '../notifier/repositories/notifications.repository'
 
 export interface ListResult {
 	items: Notification[]
@@ -10,13 +10,10 @@ export interface ListResult {
 
 @Injectable()
 export class AdminService {
-	constructor(
-		@Inject(NotificationsReadPrismaClient)
-		private readonly read: NotificationsReadPrismaClient
-	) {}
+	constructor(private readonly repo: NotificationsRepository) {}
 
 	async getById(id: string): Promise<Notification> {
-		const row = await this.read.notification.findUnique({ where: { id } })
+		const row = await this.repo.findById(id)
 		if (!row) throw new NotFoundException(`notification ${id} not found`)
 		return row
 	}
@@ -28,13 +25,10 @@ export class AdminService {
 		limit: number
 		cursor?: string
 	}): Promise<ListResult> {
-		const rows = await this.read.notification.findMany({
-			where: {
-				...(opts.status ? { status: opts.status } : {}),
-				...(opts.cursor ? { id: { lt: opts.cursor } } : {})
-			},
-			orderBy: { id: 'desc' },
-			take: opts.limit + 1
+		const rows = await this.repo.list({
+			status: opts.status,
+			limit: opts.limit + 1,
+			cursor: opts.cursor
 		})
 
 		const hasMore = rows.length > opts.limit

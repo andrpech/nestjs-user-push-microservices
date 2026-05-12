@@ -17,8 +17,12 @@ enum NotificationStatus {
 
 model Notification {
   id                  String             @id
-  userId              String             @unique @map("user_id")
-  name                String
+  type                String
+  sourceEventId       String             @map("source_event_id")
+  recipient           Json
+  params              Json
+  channel             String
+  scheduledFor        DateTime           @map("scheduled_for")
   status              NotificationStatus @default(PENDING)
   attempts            Int                @default(0)
   processingStartedAt DateTime?          @map("processing_started_at")
@@ -26,11 +30,24 @@ model Notification {
   lastRedrivenAt      DateTime?          @map("last_redriven_at")
   lastError           String?            @map("last_error")
   sentAt              DateTime?          @map("sent_at")
-  history             Json               @default("[]")
   createdAt           DateTime           @default(now()) @map("created_at")
   updatedAt           DateTime           @updatedAt @map("updated_at")
 
-  @@index([status, createdAt])
-  @@index([status, processingStartedAt])
+  history NotificationHistory[]
+
+  @@unique([type, sourceEventId])
   @@map("notifications")
+}
+
+model NotificationHistory {
+  id             String   @id
+  notificationId String   @map("notification_id")
+  at             DateTime @default(now())
+  eventType      String   @map("event_type")
+  payload        Json?
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId, at])
+  @@map("notification_history")
 }

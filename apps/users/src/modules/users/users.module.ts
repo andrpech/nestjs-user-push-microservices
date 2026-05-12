@@ -6,7 +6,8 @@ import { UsersDatabaseModule } from '../../database/users.database.module'
 import { ClaimAndPublishUsersCommand } from './commands/claim-and-publish-users.command'
 import { CreateUserCommand } from './commands/create-user.command'
 import { UsersOutboxCronConsumer } from './consumers/users-outbox-cron.consumer'
-import { UserCreatedProducer } from './producers/user-created.producer'
+import { IngestProducer } from './producers/ingest.producer'
+import { UsersOutboxRepository } from './repositories/users-outbox.repository'
 import { UsersController } from './users.controller'
 import { UsersService } from './users.service'
 
@@ -17,9 +18,10 @@ const USERS_QUEUES = ['users.outbox-cron'] as const
 	controllers: [UsersController],
 	providers: [
 		UsersService,
+		UsersOutboxRepository,
 		CreateUserCommand,
 		ClaimAndPublishUsersCommand,
-		UserCreatedProducer,
+		IngestProducer,
 		UsersOutboxCronConsumer,
 		{
 			provide: QueueDepthPoller,

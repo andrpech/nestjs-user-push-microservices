@@ -52,8 +52,9 @@ export abstract class RmqProducer<T> implements OnModuleInit {
 		}
 
 		const body = Buffer.from(JSON.stringify(payload))
+		const routingKey = opts.routingKey ?? meta.routingKey
 
-		await this.channel.publish(meta.exchange, meta.routingKey, body, {
+		await this.channel.publish(meta.exchange, routingKey, body, {
 			persistent: true,
 			contentType: 'application/json',
 			messageId: opts.messageId ?? ulid(),
